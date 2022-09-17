@@ -23,12 +23,12 @@ class ChessUtils:
     ATTACKED_OFFSET[1] = np.array([[1,1], [1,-1]])
     ATTACKED_OFFSET[-1] = np.array([[-1,-1], [-1,1]])
     PIECE_DICT = {
-            " ": 0, "p": -1, "n": -2, "b": -3, "r": -4, "q": -5, "k": -6, 
+            " ": 0, "p": -1, "n": -2, "b": -3, "r": -4, "q": -5, "k": -6,
             "P": 1, "N": 2, "B": 3, "R": 4, "Q": 5, "K": 6
         }
     PIECE_DICT_INV = {v:k for k,v in PIECE_DICT.items()}
     # use nice icons
-    PIECE_DICT_INV_UNI = {0: " ", 1: "♙", 2: "♘", 3: "♗", 4: "♖", 5: "♕", 6: "♔", -1: "♟", -2: "♞", -3: "♝", -4: "♜", -5: "♛", -6: "♚"} 
+    PIECE_DICT_INV_UNI = {0: " ", 1: "♙", 2: "♘", 3: "♗", 4: "♖", 5: "♕", 6: "♔", -1: "♟", -2: "♞", -3: "♝", -4: "♜", -5: "♛", -6: "♚"}
     # {"a1": 0, "a2": 8,..., "b1": 1, "b2": 9, ..., "h8": 63}
     POSITION_DICT = {file+str(rank+1):pos+rank*8 for file, pos in zip("abcdefgh", range(64)) for rank in range(8)}
     POSITION_DICT_INV = {v:k for k,v in POSITION_DICT.items()}
@@ -158,13 +158,13 @@ def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
     if abs(state.board[pos])==1 and pos_f in state.en_passant_allowed:
         # check if king in check
 
-        #1 remove both pieces 
+        #1 remove both pieces
         board_copy = deepcopy(state.board)
         capture_pawn_pos = pos_f+8 if state.turn==-1 else pos_f-8
         board_copy[pos] = 0
         board_copy[capture_pawn_pos] = 0
         #2 and check if king in check
-        targets = list(range(24,32)) if state.turn==-1 else list(range(32,40)) 
+        targets = list(range(24,32)) if state.turn==-1 else list(range(32,40))
         if state.turn*6 in board_copy[targets]:
             king_pos = np.where(board_copy==state.turn*6)[0][0]
             # get the closest enemy piece
@@ -207,9 +207,9 @@ def get_direct_attacks(pos, piece, state: State)->np.array:
                     dig_hor_moves.append(pos_1d)
                     break
         attacked_poisitions = dig_hor_moves
-        
+
     else:
-        attacked_poisitions = allowed_moves_by_piece 
+        attacked_poisitions = allowed_moves_by_piece
     return attacked_poisitions
 
 class Chess:
@@ -223,7 +223,7 @@ class Chess:
         """
         v = [ChessUtils.PIECE_DICT_INV[piece] for piece in self.state.board]
         repr = self.build_representation(v)
-        
+
         player_name = "White" if self.state.turn == 1 else "Black"
         return f"Player to move: {player_name}\n" + f"Move count: {self.state.full_move_number}\n" + repr
 
@@ -257,7 +257,7 @@ class Chess:
         repr = repr + hline +"  || a | b | c | d | e | f | g | h\n"
         return repr
 
-    
+
     def print_allowed_moves(self, allowed_moves, pos):
         # TODO: duplicated functionality
         board_allowed = np.zeros(64)
@@ -271,7 +271,7 @@ class Chess:
 
     def move(self, move: Union[str, List[int]], check_allowed_moves: bool = False):
 
-        
+
         pos_i, pos_f, promoted_piece = self.convert_move_to_ints(move)
         piece = self.state.board[pos_i]
         piece_color = 1 if piece > 0 else -1
@@ -290,7 +290,7 @@ class Chess:
         if promoted_piece is not None:
             self.state.board[pos_f] = ChessUtils.PIECE_DICT[promoted_piece] * -piece_color  # lower case is negative already
         else:
-            self.state.board[pos_f] = self.state.board[pos_i] 
+            self.state.board[pos_f] = self.state.board[pos_i]
         self.state.board[pos_i] = 0
         # en passant
         if (pos_f in self.state.en_passant_allowed) and abs(piece)==1:
@@ -315,7 +315,7 @@ class Chess:
         # 3. castling allowed
         self.update_castling_rights(piece, piece_color, pos_i)
 
-        # 5. and so on 
+        # 5. and so on
         if self.optimizer is not None:
             self.optimizer.update(self.state)
         # Bonus, keeping track of move combinations for debugging
@@ -328,7 +328,7 @@ class Chess:
             self.state.en_passant_allowed.append(pos_f-8)
         elif piece == -1 and (pos_f-pos_i) == -16:
             self.state.en_passant_allowed.append(pos_f+8)
-            
+
     def update_castling_rights(self, piece, piece_color, pos_i):
         if abs(piece)==6:
             if piece_color==1 and 1 in self.state.castling_rights:
@@ -340,7 +340,7 @@ class Chess:
                 self.state.castling_rights.remove(2)
             elif piece_color==-1 and pos_i==56 and 0 in self.state.castling_rights:
                 self.state.castling_rights.remove(0)
-        
+
     def convert_move_to_ints(self, move: Union[str, List[int]])-> Tuple[int]:
         """ Convert move to ints """
         promoted_piece = None
@@ -371,7 +371,7 @@ class Chess:
 
 def get_allowed_moves_by_piece(pos, piece, move_directions_offset):
     """ Get allowed moves based only on piece related moves."""
-    
+
     # we have to take into account limits of the board in the side, which complicates things if we use a 1D array for the board
     pos_2d = np.unravel_index(pos, (8,8))
     empty_board = np.zeros((8,8))
@@ -410,7 +410,7 @@ def get_allowed_moves(board, pos, en_passant_allowed, castling_rights, state, op
     # 4 remove moves for pawns if en passant is not allowed
     if abs(piece) == 1:
         # only move to corners if en passant is allowed or there is a opposite piece there
-        allowed_moves = get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed) 
+        allowed_moves = get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed)
     # 5 Checks
     # if next possible move is to take king, ilegal move: inefficient but work
     allowed_moves = get_check_illegal_moves_optimized(state, pos, allowed_moves, optimizer)
@@ -421,7 +421,7 @@ def get_allowed_moves(board, pos, en_passant_allowed, castling_rights, state, op
         castle_types_allowed = get_castle_possibilities(board, color, castling_rights, optimizer)
         castling_positions_allowed = [ChessUtils.CASTLING_POS[castle_type_allowed][abs(piece)][1] for castle_type_allowed in castle_types_allowed if pos==ChessUtils.CASTLING_POS[castle_type_allowed][abs(piece)][0]]
         allowed_moves = np.concatenate((allowed_moves, np.array(castling_positions_allowed)))
-        
+
     return allowed_moves
 
 def get_check_illegal_moves_optimized(state: State,pos: int, allowed_moves: list, optimizer: Optimizer):
@@ -485,7 +485,7 @@ def get_index_trajectory(pos_i:int, pos_f:int)-> list:
         return index_trajectory
 
     #pos_2d_i= np.unravel_index(pos_i, (8,8))
-    #same as 
+    #same as
     pos_2d_i = (pos_i//8, pos_i%8)
     pos_2d_f = (pos_f//8, pos_f%8)
 
@@ -494,7 +494,7 @@ def get_index_trajectory(pos_i:int, pos_f:int)-> list:
     # make it unit vector
     direction[0] = 0 if direction[0]==0 else direction[0]/abs(direction[0])
     direction[1] = 0 if direction[1]==0 else direction[1]/abs(direction[1])
-   
+
     # get index of trajectory
     index_trajectory.append(pos_i)
     cont = 0
@@ -512,7 +512,7 @@ def get_allowed_moves_in_state(state, optimizer=None):
         allowed_moves = get_allowed_moves(board=state.board, pos=pos_i, en_passant_allowed=state.en_passant_allowed, castling_rights=state.castling_rights, state=state, optimizer=optimizer)
         for move in allowed_moves:
             allowed_complete_moves.append(ChessUtils.POSITION_DICT_INV[pos_i] + ChessUtils.POSITION_DICT_INV[move])
-            
+
     # moves that could be a promotion
     promoting_moves = [move for move in allowed_complete_moves if (move[1] in ["2", "7"] and move[3] in ["1", "8"]) and abs(state.board[ChessUtils.POSITION_DICT[move[0:2]]])==1]
     allowed_intermediate_moves = [move for move in allowed_complete_moves if move not in promoting_moves]

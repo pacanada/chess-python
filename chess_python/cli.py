@@ -15,7 +15,7 @@ def main():
                 game.state.board,
                  ChessUtils.POSITION_DICT[pos],
                   game.state.en_passant_allowed,
-                   game.state.castling_rights, 
+                   game.state.castling_rights,
                    game.state, game.optimizer)
             print("Allowed moves: ", )
             game.print_allowed_moves(allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos])
