@@ -20,7 +20,7 @@ def parse_fen(
     board_string_split = board_string.split("/")
     for j, rank in enumerate(board_string_split):
         offset = 0
-        for i, square in enumerate(rank):
+        for square in rank:
             if square.isdigit():
                 board[64 - (j + 1) * 8 + (offset) : (offset + int(square))] = 0
                 offset += int(square)

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -86,10 +86,10 @@ class ChessUtils:
 
 
 class State:
-    def __init__(self, fen_string: str):
+    def __init__(self, fen_string: Optional[str]):
         """Class to keep track of the state of the game."""
         # TODO: castling and on passant can be encoded in a smarter way
-        self.fen_string: str = fen_string
+        self.fen_string = fen_string
         (
             board,
             turn,
@@ -157,10 +157,11 @@ class Optimizer:
                         state.board[index_trajectory] != 0
                     ][0]
                     pin_positions.append(pin_pos)
+                    # enemy which is doing the pin
                     self.pin_map_dict[pin_pos] = (
                         pos,
                         index_trajectory,
-                    )  # enemy which is doing the pin
+                    )
 
         return np.array(pin_positions)
 
@@ -327,10 +328,10 @@ def get_direct_attacks(pos, piece, state: State) -> np.array:
 
 
 class Chess:
-    def __init__(self, fen: str = None):
+    def __init__(self, fen: Optional[str] = None):
         self.state = State(fen_string=fen)
         self.optimizer = Optimizer(self.state)
-        self.move_combination = []
+        self.move_combination: List[str] = []
 
     def __repr__(self):
         """Nice representation of board state"""
