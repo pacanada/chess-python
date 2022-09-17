@@ -9,6 +9,7 @@ packages = [{include = "chess_python"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 numpy = "^1.23.3"
+numba = "^0.56.2"
 
 
 [tool.poetry.group.dev.dependencies]

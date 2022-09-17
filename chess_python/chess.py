@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import numba
 
 from chess_python.utils import parse_fen
 
@@ -158,10 +159,7 @@ class Optimizer:
                     ][0]
                     pin_positions.append(pin_pos)
                     # enemy which is doing the pin
-                    self.pin_map_dict[pin_pos] = (
-                        pos,
-                        index_trajectory,
-                    )
+                    self.pin_map_dict[pin_pos] = (pos, index_trajectory)
 
         return np.array(pin_positions)
 
@@ -173,6 +171,7 @@ class Optimizer:
         for pos in enemy_positions:
             piece = state.board[pos]
             direct_attacks = get_direct_attacks(pos, piece, state)
+            # TODO: this a 25% of the time spent in search
             self.attacked_map_dict[pos] = direct_attacks
             attacked_map = np.concatenate((attacked_map, direct_attacks))
         # probably duplicated
@@ -186,9 +185,6 @@ class Optimizer:
         if is_king_in_check:
             if is_piece_a_king:
                 if pos_f in self.attacked_map:
-                    # if (pos_f in positions_of_attacking_pieces and len(positions_of_attacking_pieces)<2):
-                    #    return True
-                    # else:
                     return False
                 else:
                     return True
@@ -344,6 +340,8 @@ class Chess:
             + f"Move count: {self.state.full_move_number}\n"
             + repr
         )
+    def legal_moves(self):
+        return get_allowed_moves_in_state(self.state, self.optimizer)
 
     def fen(self):
         return "not implemented"
@@ -435,10 +433,8 @@ class Chess:
         self.state.turn = -self.state.turn
         # 2. en passant allowed
         self.update_en_passant_rights(piece, pos_i, pos_f)
-
         # 3. castling allowed
         self.update_castling_rights(piece, piece_color, pos_i)
-
         # 5. and so on
         if self.optimizer is not None:
             self.optimizer.update(self.state)
@@ -466,7 +462,9 @@ class Chess:
             elif piece_color == -1 and pos_i == 56 and 0 in self.state.castling_rights:
                 self.state.castling_rights.remove(0)
 
-    def convert_move_to_ints(self, move: Union[str, List[int]]) -> Tuple[int]:
+    def convert_move_to_ints(
+        self, move: Union[str, List[int]]
+    ) -> Tuple[int, int, Optional[str]]:
         """Convert move to ints"""
         promoted_piece = None
         if len(move) == 5:
@@ -671,7 +669,7 @@ def get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
     allowed_push_moves = [move for move in push_moves if board[move] == 0]
     return np.array(allowed_diagonal_moves + allowed_push_moves)
 
-
+#@numba.jit(nopython=True)
 def get_index_trajectory(pos_i: int, pos_f: int) -> list:
     """Get index of trajectory between two positions"""
     # TODO: is there a simpler way to do this?
@@ -696,8 +694,6 @@ def get_index_trajectory(pos_i: int, pos_f: int) -> list:
     while index_trajectory[-1] != pos_f:
         index_trajectory.append(index_trajectory[-1] + direction[0] * 8 + direction[1])
         cont += 1
-        if cont > 10:
-            print("error")
     return index_trajectory[1:-1]
 
 
