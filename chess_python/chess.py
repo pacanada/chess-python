@@ -184,7 +184,7 @@ class Optimizer:
             direct_attacks = get_direct_attacks(pos, piece, state)
             self.attacked_map_dict[pos] = direct_attacks
             # TODO: can we get rid of the array here?
-            attacked_map = attacked_map + list(direct_attacks)
+            attacked_map = attacked_map + direct_attacks
         # probably duplicated
         return attacked_map
 
@@ -533,7 +533,7 @@ def get_allowed_moves_by_piece(pos, piece, move_directions_offset):
             continue
 
         empty_board[allowed_x, allowed_y] = 1
-    return empty_board.ravel().nonzero()[0]
+    return list(empty_board.ravel().nonzero()[0])
 
 
 def check_if_positions_are_attacked(optimizer: Optimizer, positions: list):
