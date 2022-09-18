@@ -6,9 +6,12 @@ Using `python3 -m cProfile -o prof.txt tree.py -h` for profiling and `snakeviz p
 visualize.
 
 Perft(3) initial positions `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1` (8902
-positions, reference time 0.05 with `python-chess`: - 1.25 s (first) - 0.79 s (moving
-`get_positions_attacking_pieces` to optimizer initialization and update, not when checking if move
+positions, reference time 0.05 with `python-chess`:
+
+    - 1.25 s (first) 
+    - 0.79 s (moving`get_positions_attacking_pieces` to optimizer initialization and update, not when checking if move
 is legal)
+    - 0.70 removing np.array from list of moves (does not make a lot of sense)
 
 # TODO:
 

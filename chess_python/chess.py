@@ -22,21 +22,17 @@ class ChessUtils:
     )
     QUEEN_MOVES = np.concatenate((BISHOP_MOVES, ROOK_MOVES))
     MOVE_DIRECTIONS_OFFSET = {
-        1: np.array([[1, 0], [1, 1], [1, -1], [2, 0]]),
-        -1: np.array([[-1, 0], [-1, -1], [-1, 1], [-2, 0]]),  # inverted pawn moves
-        2: np.array(
-            [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, -2], [1, 2], [-1, 2], [-1, -2]]
-        ),
+        1: [[1, 0], [1, 1], [1, -1], [2, 0]],
+        -1: [[-1, 0], [-1, -1], [-1, 1], [-2, 0]],  # inverted pawn moves
+        2: [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, -2], [1, 2], [-1, 2], [-1, -2]],
         3: BISHOP_MOVES,
         4: ROOK_MOVES,
         5: QUEEN_MOVES,
-        6: np.array(
-            [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]
-        ),
+        6: [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]],
     }
     ATTACKED_OFFSET = MOVE_DIRECTIONS_OFFSET.copy()
-    ATTACKED_OFFSET[1] = np.array([[1, 1], [1, -1]])
-    ATTACKED_OFFSET[-1] = np.array([[-1, -1], [-1, 1]])
+    ATTACKED_OFFSET[1] = [[1, 1], [1, -1]]
+    ATTACKED_OFFSET[-1] =[[-1, -1], [-1, 1]]
     PIECE_DICT = {
         " ": 0,
         "p": -1,
@@ -77,12 +73,20 @@ class ChessUtils:
     }
     POSITION_DICT_INV = {v: k for k, v in POSITION_DICT.items()}
     CASTLING_ENCODING = {"Q": 0, "K": 1, "q": 2, "k": 3}
+    CASTLING_PER_COLOR = {1: [0, 1], -1: [2, 3]}
     # castling type, piece_type, allowed_moves (init, final)
     CASTLING_POS = {
         0: {6: [4, 2], 4: [0, 3]},
         1: {6: [4, 6], 4: [7, 5]},
         2: {6: [60, 58], 4: [56, 59]},
         3: {6: [60, 62], 4: [59, 61]},
+    }
+    CASTLING_UTILS = {
+        0: {"square_indexes": [0, 1, 2, 3, 4], "squares_layout": [4, 0, 0, 0, 6], "positions_should_not_attacked": [2, 3, 4]},
+        1: {"square_indexes": [4, 5, 6, 7], "squares_layout": [6, 0, 0, 4], "positions_should_not_attacked": [4, 5, 6]},
+        2: {"square_indexes": [56, 57, 58, 59, 60], "squares_layout": [-4, 0, 0, 0, -6], "positions_should_not_attacked": [58, 59, 60]},
+        3: {"square_indexes": [60, 61, 62, 63], "squares_layout": [-6, 0, 0, -4], "positions_should_not_attacked": [60, 61, 62]},
+
     }
 
 
@@ -167,18 +171,20 @@ class Optimizer:
                     # enemy which is doing the pin
                     self.pin_map_dict[pin_pos] = (pos, index_trajectory)
 
-        return np.array(pin_positions)
+        return pin_positions
 
     def update_attacked_map(self, state: State) -> np.array:
         # initialize to zero
         self.attacked_map_dict = {}
-        attacked_map = np.array([])
+
+        attacked_map = []
         enemy_positions = np.where(state.board * state.turn < 0)[0]
         for pos in enemy_positions:
             piece = state.board[pos]
             direct_attacks = get_direct_attacks(pos, piece, state)
             self.attacked_map_dict[pos] = direct_attacks
-            attacked_map = np.concatenate((attacked_map, direct_attacks))
+            # TODO: can we get rid of the array here?
+            attacked_map = attacked_map + list(direct_attacks)
         # probably duplicated
         return attacked_map
 
@@ -548,16 +554,12 @@ def get_allowed_moves(
         pos, piece, ChessUtils.MOVE_DIRECTIONS_OFFSET
     )
     # 2 remove moves where end position is own piece
-    allowed_moves = np.array(
-        [move for move in allowed_moves_by_piece if board[move] * color <= 0]
-    )
+    allowed_moves = [move for move in allowed_moves_by_piece if board[move] * color <= 0]
     # 3 remove moves where there is a piece in trajectory (only bishop, queen and rook)
     if abs(piece) in [1, 3, 4, 5]:
         blocked_illegal_moves = get_blocked_illegal_moves(board, pos, allowed_moves)
         # remove them
-        allowed_moves = np.array(
-            [move for move in allowed_moves if move not in blocked_illegal_moves]
-        )
+        allowed_moves = [move for move in allowed_moves if move not in blocked_illegal_moves]
     # 4 remove moves for pawns if en passant is not allowed
     if abs(piece) == 1:
         # only move to corners if en passant is allowed or there is a opposite piece there
@@ -573,6 +575,7 @@ def get_allowed_moves(
     # 6 Castling
     if abs(piece) == 6:
         # in this case we dont want allowe by default the two files move of the king, we treat castling separately
+        # TODO: probably duplicated with get_castl_possibilities?
         castle_types_allowed = get_castle_possibilities(
             board, color, castling_rights, optimizer
         )
@@ -581,9 +584,7 @@ def get_allowed_moves(
             for castle_type_allowed in castle_types_allowed
             if pos == ChessUtils.CASTLING_POS[castle_type_allowed][abs(piece)][0]
         ]
-        allowed_moves = np.concatenate(
-            (allowed_moves, np.array(castling_positions_allowed))
-        )
+        allowed_moves = allowed_moves + castling_positions_allowed
 
     return allowed_moves
 
@@ -602,34 +603,16 @@ def get_castle_possibilities(board, color, castling_rights, optimizer) -> List[i
     """Get castle possibilities."""
     allowed_castle_moves = []
 
-    castling_rights_per_color = (
-        [cast for cast in castling_rights if cast in [0, 1]]
-        if color == 1
-        else [cast for cast in castling_rights if cast in [2, 3]]
-    )
+    castling_rights_per_color = [cast for cast in castling_rights if cast in ChessUtils.CASTLING_PER_COLOR[color]]
     for castle_type in castling_rights_per_color:
-        if castle_type == 0:  # Queenside
-            # space must be empty, king should not be in check and rook not attacked
-            if all(
-                board[[0, 1, 2, 3, 4]] == np.array([4, 0, 0, 0, 6])
-            ) and not check_if_positions_are_attacked(optimizer, [2, 3, 4]):
-                allowed_castle_moves.append(0)
-        elif castle_type == 1:  # Kingside
-            if all(
-                board[[4, 5, 6, 7]] == np.array([6, 0, 0, 4])
-            ) and not check_if_positions_are_attacked(optimizer, [4, 5, 6]):
-                allowed_castle_moves.append(1)
+        square_indexes = ChessUtils.CASTLING_UTILS[castle_type]["square_indexes"]
+        squares_layout = ChessUtils.CASTLING_UTILS[castle_type]["squares_layout"]
+        positions = ChessUtils.CASTLING_UTILS[castle_type]["positions_should_not_attacked"]
+        if all(
+                board[square_indexes] == squares_layout
+            ) and not check_if_positions_are_attacked(optimizer, positions):
+            allowed_castle_moves.append(castle_type)
 
-        elif castle_type == 2:
-            if all(
-                board[[56, 57, 58, 59, 60]] == np.array([-4, 0, 0, 0, -6])
-            ) and not check_if_positions_are_attacked(optimizer, [58, 59, 60]):
-                allowed_castle_moves.append(2)
-        elif castle_type == 3:
-            if all(
-                board[[60, 61, 62, 63]] == np.array([-6, 0, 0, -4])
-            ) and not check_if_positions_are_attacked(optimizer, [60, 61, 62]):
-                allowed_castle_moves.append(3)
     return allowed_castle_moves
 
 
@@ -673,7 +656,7 @@ def get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
         if (pos + push_index) in allowed_moves
     ]
     allowed_push_moves = [move for move in push_moves if board[move] == 0]
-    return np.array(allowed_diagonal_moves + allowed_push_moves)
+    return allowed_diagonal_moves + allowed_push_moves
 
 
 # @numba.jit(nopython=True)
