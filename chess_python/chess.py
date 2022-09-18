@@ -126,10 +126,12 @@ class Optimizer:
         self.pin_map_dict: Dict[int, np.array] = {}
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
+        self.positions_atacking_king =self.get_positions_of_attacking_pieces(np.where(state.board == state.turn * 6)[0][0])
 
     def update(self, state: State):
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
+        self.positions_atacking_king = self.get_positions_of_attacking_pieces(np.where(state.board == state.turn * 6)[0][0])
 
     def update_pin_map(self, state: State):
         pin_positions = []
@@ -171,7 +173,6 @@ class Optimizer:
         for pos in enemy_positions:
             piece = state.board[pos]
             direct_attacks = get_direct_attacks(pos, piece, state)
-            # TODO: this a 25% of the time spent in search
             self.attacked_map_dict[pos] = direct_attacks
             attacked_map = np.concatenate((attacked_map, direct_attacks))
         # probably duplicated
@@ -179,7 +180,6 @@ class Optimizer:
 
     def is_move_legal(self, pos_f: int, pos: int, state: State) -> bool:
         king_pos = np.where(state.board == state.turn * 6)[0][0]
-        positions_of_attacking_pieces = self.get_positions_of_attacking_pieces(king_pos)
         is_king_in_check = king_pos in self.attacked_map
         is_piece_a_king = abs(state.board[pos]) == 6
         if is_king_in_check:
@@ -190,21 +190,21 @@ class Optimizer:
                     return True
             else:
                 if (
-                    pos_f in positions_of_attacking_pieces
-                    and len(positions_of_attacking_pieces) < 2
+                    pos_f in self.positions_atacking_king
+                    and len(self.positions_atacking_king) < 2
                 ) and pos not in self.pin_map:
                     return True
                 # also where the piece block check block
-                if abs(state.board[positions_of_attacking_pieces[0]]) in [3, 4, 5]:
+                if abs(state.board[self.positions_atacking_king[0]]) in [3, 4, 5]:
                     # only in the case of bishop, rook or queen attck can be block
                     possible_blocking_trajectories = get_index_trajectory(
-                        pos_i=king_pos, pos_f=positions_of_attacking_pieces[0]
+                        pos_i=king_pos, pos_f=self.positions_atacking_king[0]
                     )
                 else:
                     possible_blocking_trajectories = []
 
                 if (
-                    len(positions_of_attacking_pieces) < 2
+                    len(self.positions_atacking_king) < 2
                     and pos_f in possible_blocking_trajectories
                 ):
                     return True
@@ -231,12 +231,8 @@ class Optimizer:
                 else:
                     return True
 
-    def get_positions_of_attacking_pieces(self, king_pos):
-        positions_of_attacking_pieces = []
-        for pos_0, attacked_pos in self.attacked_map_dict.items():
-            if king_pos in attacked_pos:
-                positions_of_attacking_pieces.append(pos_0)
-        return positions_of_attacking_pieces
+    def get_positions_of_attacking_pieces(self, target_pos: int):
+        return [pos for pos in self.attacked_map_dict.keys() if target_pos in self.attacked_map_dict[pos]]
 
 
 def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
