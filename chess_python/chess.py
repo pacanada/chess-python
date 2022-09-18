@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import numba
+import numpy as np
 
 from chess_python.utils import parse_fen
 
@@ -126,12 +126,16 @@ class Optimizer:
         self.pin_map_dict: Dict[int, np.array] = {}
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
-        self.positions_atacking_king =self.get_positions_of_attacking_pieces(np.where(state.board == state.turn * 6)[0][0])
+        self.positions_atacking_king = self.get_positions_of_attacking_pieces(
+            np.where(state.board == state.turn * 6)[0][0]
+        )
 
     def update(self, state: State):
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
-        self.positions_atacking_king = self.get_positions_of_attacking_pieces(np.where(state.board == state.turn * 6)[0][0])
+        self.positions_atacking_king = self.get_positions_of_attacking_pieces(
+            np.where(state.board == state.turn * 6)[0][0]
+        )
 
     def update_pin_map(self, state: State):
         pin_positions = []
@@ -179,6 +183,7 @@ class Optimizer:
         return attacked_map
 
     def is_move_legal(self, pos_f: int, pos: int, state: State) -> bool:
+        # TODO: reduce cyclomatic complexity
         king_pos = np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
         is_piece_a_king = abs(state.board[pos]) == 6
@@ -232,7 +237,11 @@ class Optimizer:
                     return True
 
     def get_positions_of_attacking_pieces(self, target_pos: int):
-        return [pos for pos in self.attacked_map_dict.keys() if target_pos in self.attacked_map_dict[pos]]
+        return [
+            pos
+            for pos in self.attacked_map_dict.keys()
+            if target_pos in self.attacked_map_dict[pos]
+        ]
 
 
 def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
@@ -336,6 +345,7 @@ class Chess:
             + f"Move count: {self.state.full_move_number}\n"
             + repr
         )
+
     def legal_moves(self):
         return get_allowed_moves_in_state(self.state, self.optimizer)
 
@@ -665,11 +675,12 @@ def get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
     allowed_push_moves = [move for move in push_moves if board[move] == 0]
     return np.array(allowed_diagonal_moves + allowed_push_moves)
 
-#@numba.jit(nopython=True)
-def get_index_trajectory(pos_i: int, pos_f: int) -> list:
+
+# @numba.jit(nopython=True)
+def get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
     """Get index of trajectory between two positions"""
     # TODO: is there a simpler way to do this?
-    index_trajectory = []
+    index_trajectory: List[int] = []
     if pos_i == pos_f:
         return index_trajectory
 
