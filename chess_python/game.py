@@ -1,4 +1,4 @@
-from chess_python.chess import Chess, ChessUtils, get_allowed_moves
+from chess_python.chess import Chess, ChessUtils
 
 
 def main():
@@ -16,14 +16,14 @@ def main():
         elif inp == "2":
             pos = input("Enter the piece position: ")
             allowed_moves = game.legal_moves()
-            if len(allowed_moves)==0:
+            if len(allowed_moves) == 0:
                 print("Checkmate!!")
             else:
                 print(
                     "Allowed moves: ",
-                game.print_allowed_moves(
-                    allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos]
-                )
+                    game.print_allowed_moves(
+                        allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos]
+                    ),
                 )
         elif inp == "3":
             move = input("Enter the move: ")
