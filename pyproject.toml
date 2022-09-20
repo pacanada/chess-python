@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "chess-python"
+name = "chess-under-1000-lines"
 version = "0.1.0"
 description = "Python implementation of the game of chess."
 authors = ["pacanada <pereirapcanada@gmail.com>"]
