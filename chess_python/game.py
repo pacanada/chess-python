@@ -15,14 +15,9 @@ def main():
                 game = Chess(fen)
         elif inp == "2":
             pos = input("Enter the piece position: ")
-            allowed_moves = get_allowed_moves(
-                game.state.board,
-                ChessUtils.POSITION_DICT[pos],
-                game.state.en_passant_allowed,
-                game.state.castling_rights,
-                game.state,
-                game.optimizer,
-            )
+            allowed_moves = game.legal_moves()
+            if len(allowed_moves)==0:
+                print("Checkmate!!")
             print(
                 "Allowed moves: ",
             )
@@ -32,7 +27,6 @@ def main():
         elif inp == "3":
             move = input("Enter the move: ")
             pos = move[:2]
-            # allowed_moves = get_allowed_moves(game.state.board, ChessUtils.POSITION_DICT[pos], game.state.en_passant_allowed, game.state.castling_rights, game.state, game.optimizer)
             game.move(move, True)
             print(game)
         elif inp == "4":
