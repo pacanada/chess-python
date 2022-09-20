@@ -18,12 +18,13 @@ def main():
             allowed_moves = game.legal_moves()
             if len(allowed_moves)==0:
                 print("Checkmate!!")
-            print(
-                "Allowed moves: ",
-            )
-            game.print_allowed_moves(
-                allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos]
-            )
+            else:
+                print(
+                    "Allowed moves: ",
+                game.print_allowed_moves(
+                    allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos]
+                )
+                )
         elif inp == "3":
             move = input("Enter the move: ")
             pos = move[:2]
