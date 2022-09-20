@@ -19,3 +19,4 @@ is legal)
     - [ ] Utils if there is a mismatch in positions
     - [ ] Improve performance
     - [ ] Improve overall code quality (clarity, choose right data structure for the job)
+    - [ ] Automate release with github action to pypy 
