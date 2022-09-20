@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -488,17 +488,32 @@ class Chess:
             elif piece_color == -1 and pos_i == 56 and 0 in self.state.castling_rights:
                 self.state.castling_rights.remove(0)
 
-    def convert_move_to_ints(self, move: str) -> Tuple[int, int, Optional[str]]:
+    def convert_move_to_ints(
+        self, move: Union[str, List]
+    ) -> Tuple[int, int, Optional[str]]:
         """Convert move to ints"""
+
         if len(move) == 5:
+            # TODO: consistency for types in this var
             promoted_piece: Optional[str] = move[4]
             move = move[:4]
+        else:
+            promoted_piece = None
+
+        if (
+            isinstance(move, List)
+            and len(move) == 2
+            and max(move) < 64
+            and min(move) >= 0
+        ):
+            pos_i, pos_f = move[0], move[1]
         elif isinstance(move, str) and len(move) == 4:
             pos_i = ChessUtils.POSITION_DICT[move[0:2]]
             pos_f = ChessUtils.POSITION_DICT[move[2:4]]
-            promoted_piece = None
         else:
-            raise ValueError("Invalid move. Must be a string like to ´a1a2´ or ´a7a8n´")
+            raise ValueError(
+                "Invalid move. Must be a list of two ints or a string of length 4: [0,1] corresponds to ´a1a2´ "
+            )
         return pos_i, pos_f, promoted_piece
 
     def validate(self, pos_i, pos_f, allowed_moves):

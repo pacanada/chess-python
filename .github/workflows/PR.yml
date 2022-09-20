@@ -32,7 +32,7 @@ jobs:
         poetry install --no-interaction
     - name: Test with pytest
       run: |
-        poetry run pytest --cov dfds_ds_toolbox --cov-report=html:coverage
+        poetry run pytest --cov chess-python --cov-report=html:coverage
   precommit:
     runs-on: ubuntu-latest
     steps:
