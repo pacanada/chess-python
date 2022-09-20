@@ -1,10 +1,10 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
 
 def parse_fen(
-    fen_string: str, piece_dict: dict
+    fen_string: Optional[str], piece_dict: dict
 ) -> Tuple[np.array, int, str, str, int, int]:
     """Parse a FEN string to a board, turn, castling rights, en passant square, half move clock, full move number.
     fen_string=rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1.

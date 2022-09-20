@@ -1,7 +1,6 @@
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
-import numba
 import numpy as np
 
 from chess_python.utils import parse_fen
@@ -32,7 +31,7 @@ class ChessUtils:
     }
     ATTACKED_OFFSET = MOVE_DIRECTIONS_OFFSET.copy()
     ATTACKED_OFFSET[1] = [[1, 1], [1, -1]]
-    ATTACKED_OFFSET[-1] =[[-1, -1], [-1, 1]]
+    ATTACKED_OFFSET[-1] = [[-1, -1], [-1, 1]]
     PIECE_DICT = {
         " ": 0,
         "p": -1,
@@ -82,11 +81,26 @@ class ChessUtils:
         3: {6: [60, 62], 4: [59, 61]},
     }
     CASTLING_UTILS = {
-        0: {"square_indexes": [0, 1, 2, 3, 4], "squares_layout": [4, 0, 0, 0, 6], "positions_should_not_attacked": [2, 3, 4]},
-        1: {"square_indexes": [4, 5, 6, 7], "squares_layout": [6, 0, 0, 4], "positions_should_not_attacked": [4, 5, 6]},
-        2: {"square_indexes": [56, 57, 58, 59, 60], "squares_layout": [-4, 0, 0, 0, -6], "positions_should_not_attacked": [58, 59, 60]},
-        3: {"square_indexes": [60, 61, 62, 63], "squares_layout": [-6, 0, 0, -4], "positions_should_not_attacked": [60, 61, 62]},
-
+        0: {
+            "square_indexes": [0, 1, 2, 3, 4],
+            "squares_layout": [4, 0, 0, 0, 6],
+            "positions_should_not_attacked": [2, 3, 4],
+        },
+        1: {
+            "square_indexes": [4, 5, 6, 7],
+            "squares_layout": [6, 0, 0, 4],
+            "positions_should_not_attacked": [4, 5, 6],
+        },
+        2: {
+            "square_indexes": [56, 57, 58, 59, 60],
+            "squares_layout": [-4, 0, 0, 0, -6],
+            "positions_should_not_attacked": [58, 59, 60],
+        },
+        3: {
+            "square_indexes": [60, 61, 62, 63],
+            "squares_layout": [-6, 0, 0, -4],
+            "positions_should_not_attacked": [60, 61, 62],
+        },
     }
 
 
@@ -177,7 +191,7 @@ class Optimizer:
         # initialize to zero
         self.attacked_map_dict = {}
 
-        attacked_map = []
+        attacked_map: List[List[int]] = []
         enemy_positions = np.where(state.board * state.turn < 0)[0]
         for pos in enemy_positions:
             piece = state.board[pos]
@@ -188,7 +202,7 @@ class Optimizer:
         # probably duplicated
         return attacked_map
 
-    def is_move_legal(self, pos_f: int, pos: int, state: State) -> bool:
+    def is_move_legal(self, pos_f: int, pos: int, state: State) -> bool:  # noqa C901
         # TODO: reduce cyclomatic complexity
         king_pos = np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
@@ -343,13 +357,13 @@ class Chess:
     def __repr__(self):
         """Nice representation of board state"""
         v = [ChessUtils.PIECE_DICT_INV[piece] for piece in self.state.board]
-        repr = self.build_representation(v)
+        repr_str = self.build_representation(v)
 
         player_name = "White" if self.state.turn == 1 else "Black"
         return (
             f"Player to move: {player_name}\n"
             + f"Move count: {self.state.full_move_number}\n"
-            + repr
+            + repr_str
         )
 
     def legal_moves(self):
@@ -381,14 +395,14 @@ class Chess:
           ||  a |  b |  c |  d |  e |  f |  g |  h |"""
         hline = "-----------------------------------\n"
         pline = "{} || {} | {} | {} | {} | {} | {} | {} | {} |\n"
-        repr = "".join(
+        repr_str = "".join(
             [
                 pline.format((8 - index), *v[row - 8 : row]) + hline
                 for index, row in enumerate(range(64, 0, -8))
             ]
         )
-        repr = repr + hline + "  || a | b | c | d | e | f | g | h\n"
-        return repr
+        repr_str = repr_str + hline + "  || a | b | c | d | e | f | g | h\n"
+        return repr_str
 
     def print_allowed_moves(self, allowed_moves, pos):
         # TODO: duplicated functionality
@@ -397,11 +411,11 @@ class Chess:
             board_allowed[allowed_moves] = 1
         v = ["O" if sq == 1 else " " for sq in board_allowed]
         v[pos] = ChessUtils.PIECE_DICT_INV[self.state.board[pos]]
-        repr = self.build_representation(v)
+        repr_str = self.build_representation(v)
 
-        print("Allowed moves\n" + repr)
+        print("Allowed moves\n" + repr_str)
 
-    def move(self, move: Union[str, List[int]], check_allowed_moves: bool = False):
+    def move(self, move: str, check_allowed_moves: bool = False):
 
         pos_i, pos_f, promoted_piece = self.convert_move_to_ints(move)
         piece = self.state.board[pos_i]
@@ -474,28 +488,17 @@ class Chess:
             elif piece_color == -1 and pos_i == 56 and 0 in self.state.castling_rights:
                 self.state.castling_rights.remove(0)
 
-    def convert_move_to_ints(
-        self, move: Union[str, List[int]]
-    ) -> Tuple[int, int, Optional[str]]:
+    def convert_move_to_ints(self, move: str) -> Tuple[int, int, Optional[str]]:
         """Convert move to ints"""
-        promoted_piece = None
         if len(move) == 5:
-            promoted_piece: str = move[4]
+            promoted_piece: Optional[str] = move[4]
             move = move[:4]
-        if (
-            isinstance(move, List)
-            and len(move) == 2
-            and max(move) < 64
-            and min(move) >= 0
-        ):
-            pos_i, pos_f = move[0], move[1]
         elif isinstance(move, str) and len(move) == 4:
             pos_i = ChessUtils.POSITION_DICT[move[0:2]]
             pos_f = ChessUtils.POSITION_DICT[move[2:4]]
+            promoted_piece = None
         else:
-            raise ValueError(
-                "Invalid move. Must be a list of two ints or a string of length 4: [0,1] corresponds to ´a1a2´ "
-            )
+            raise ValueError("Invalid move. Must be a string like to ´a1a2´ or ´a7a8n´")
         return pos_i, pos_f, promoted_piece
 
     def validate(self, pos_i, pos_f, allowed_moves):
@@ -554,12 +557,16 @@ def get_allowed_moves(
         pos, piece, ChessUtils.MOVE_DIRECTIONS_OFFSET
     )
     # 2 remove moves where end position is own piece
-    allowed_moves = [move for move in allowed_moves_by_piece if board[move] * color <= 0]
+    allowed_moves = [
+        move for move in allowed_moves_by_piece if board[move] * color <= 0
+    ]
     # 3 remove moves where there is a piece in trajectory (only bishop, queen and rook)
     if abs(piece) in [1, 3, 4, 5]:
         blocked_illegal_moves = get_blocked_illegal_moves(board, pos, allowed_moves)
         # remove them
-        allowed_moves = [move for move in allowed_moves if move not in blocked_illegal_moves]
+        allowed_moves = [
+            move for move in allowed_moves if move not in blocked_illegal_moves
+        ]
     # 4 remove moves for pawns if en passant is not allowed
     if abs(piece) == 1:
         # only move to corners if en passant is allowed or there is a opposite piece there
@@ -603,14 +610,18 @@ def get_castle_possibilities(board, color, castling_rights, optimizer) -> List[i
     """Get castle possibilities."""
     allowed_castle_moves = []
 
-    castling_rights_per_color = [cast for cast in castling_rights if cast in ChessUtils.CASTLING_PER_COLOR[color]]
+    castling_rights_per_color = [
+        cast for cast in castling_rights if cast in ChessUtils.CASTLING_PER_COLOR[color]
+    ]
     for castle_type in castling_rights_per_color:
         square_indexes = ChessUtils.CASTLING_UTILS[castle_type]["square_indexes"]
         squares_layout = ChessUtils.CASTLING_UTILS[castle_type]["squares_layout"]
-        positions = ChessUtils.CASTLING_UTILS[castle_type]["positions_should_not_attacked"]
+        positions = ChessUtils.CASTLING_UTILS[castle_type][
+            "positions_should_not_attacked"
+        ]
         if all(
-                board[square_indexes] == squares_layout
-            ) and not check_if_positions_are_attacked(optimizer, positions):
+            board[square_indexes] == squares_layout
+        ) and not check_if_positions_are_attacked(optimizer, positions):
             allowed_castle_moves.append(castle_type)
 
     return allowed_castle_moves

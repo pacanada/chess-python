@@ -52,21 +52,21 @@ def perft_of_positions():
 def test_full_suite(perft_of_positions):
     for v in perft_of_positions.values():
         node = Node(game=Chess(fen=v["fen"]), depth=v["depth"], move=None)
-        assert get_size_node(node) == v["n_nodes"], f"Number of nodes does not match"
+        assert get_size_node(node) == v["n_nodes"], "Number of nodes does not match"
 
 
 def test_quick(perft_of_positions):
     v = perft_of_positions[1]
     node = Node(game=Chess(fen=v["fen"]), depth=v["depth"], move=None)
-    assert get_size_node(node) == v["n_nodes"], f"Number of nodes does not match"
+    assert get_size_node(node) == v["n_nodes"], "Number of nodes does not match"
 
 
 def test_performance(perft_of_positions):
     v = perft_of_positions[0]
     t1 = time.time()
-    node = Node(game=Chess(fen=v["fen"]), depth=v["depth"], move=None)
+    Node(game=Chess(fen=v["fen"]), depth=v["depth"], move=None)
     t2 = time.time()
     ref_time = v["approx_time"]
-    assert (t2 - t1) <= v[
-        "approx_time"
-    ], f"Elapsed time {(t2-t1):.2f} s. Reference {ref_time}"
+    # to see in the output run  pytest tests/test_tree.py::test_performance  -s
+    print(f"Run in {(t2-t1):.2f}s. Reference {ref_time}")
+    assert (t2 - t1) <= 1, f"Elapsed time {(t2-t1):.2f} s. Reference {ref_time}"

@@ -16,8 +16,9 @@ select =
     W, # PEP8 warnings (pycodestyle)
     N, # pep8-naming
     # ANN, # flake8-annotations, not including everything here.
-    ANN001, # Missing type annotation for function argument
-    ANN201, # Missing return type annotation for public function
+    # TODO: change when is ready
+    # ANN001, # Missing type annotation for function argument
+    # ANN201, # Missing return type annotation for public function
     A00, # flake8-builtins
     U100, # unused arguments
     #D102,D103 # Missing docstring in public method/function
