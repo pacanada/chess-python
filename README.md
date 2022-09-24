@@ -85,6 +85,9 @@ positions, reference time 0.05 s with
   checking if move is legal)
 - 0.70 s removing np.array from list of moves (does not make a lot of sense)
 - 0.55 s removing more np.arrays
+- 0.51 s removing np.unravel
+- 0.47 s using only lists in `get_allowed_moves_by_piece`
+- 0.39 s with revamped `get_index_trajectory`
 
 ## TODO:
 

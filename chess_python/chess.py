@@ -1,33 +1,31 @@
 from copy import deepcopy
+from functools import lru_cache
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import numba
 
 from chess_python.utils import parse_fen
 
-DEBUG = False
-
-
 class ChessUtils:
-    BISHOP_MOVES = np.delete(
-        np.array([[i, i] for i in range(-7, 8)] + [[i, -i] for i in range(-7, 8)]),
-        (7, 22),
-        axis=0,
-    )
-    ROOK_MOVES = np.delete(
-        np.array([[i, 0] for i in range(-7, 8)] + [[0, i] for i in range(-7, 8)]),
-        (7, 22),
-        axis=0,
-    )
-    QUEEN_MOVES = np.concatenate((BISHOP_MOVES, ROOK_MOVES))
+    KNIGHT_OFFSETS = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, -2], [1, 2], [-1, 2], [-1, -2]]
+    BISHOP_OFFSETS = [[i, i] for i in range(-7, 8) if i!=0] + [[i, -i] for i in range(-7, 8) if i!=0]
+    ROOK_OFFSETS = [[i, 0] for i in range(-7, 8) if i!=0] + [[0, i] for i in range(-7, 8) if i!=0]
+    QUEEN_OFFSETS = BISHOP_OFFSETS + ROOK_OFFSETS
+    KING_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]
     MOVE_DIRECTIONS_OFFSET = {
         1: [[1, 0], [1, 1], [1, -1], [2, 0]],
         -1: [[-1, 0], [-1, -1], [-1, 1], [-2, 0]],  # inverted pawn moves
-        2: [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, -2], [1, 2], [-1, 2], [-1, -2]],
-        3: BISHOP_MOVES,
-        4: ROOK_MOVES,
-        5: QUEEN_MOVES,
-        6: [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]],
+        2: KNIGHT_OFFSETS,
+        -2: KNIGHT_OFFSETS,
+        3: BISHOP_OFFSETS,
+        -3: BISHOP_OFFSETS,
+        4: ROOK_OFFSETS,
+        -4: ROOK_OFFSETS,
+        5: QUEEN_OFFSETS,
+        -5: QUEEN_OFFSETS,
+        6: KING_OFFSETS,
+        -6: KING_OFFSETS
     }
     ATTACKED_OFFSET = MOVE_DIRECTIONS_OFFSET.copy()
     ATTACKED_OFFSET[1] = [[1, 1], [1, -1]]
@@ -162,10 +160,9 @@ class Optimizer:
         enemy_positions = np.where(
             (state.board * state.turn <= -3) & (state.board * state.turn >= -5)
         )[0]
-        # own_positions = np.where(state.board*state.turn>0)[0]
         for pos in enemy_positions:
             if king_pos in get_allowed_moves_by_piece(
-                pos, state.board[pos], ChessUtils.MOVE_DIRECTIONS_OFFSET
+                pos, ChessUtils.MOVE_DIRECTIONS_OFFSET[state.board[pos]]
             ):
                 # only if piece can attack king
                 index_trajectory = get_index_trajectory(pos_i=pos, pos_f=king_pos)
@@ -265,9 +262,8 @@ class Optimizer:
 
 
 def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
+    # TODO: sure it could be simplified
     if abs(state.board[pos]) == 1 and pos_f in state.en_passant_allowed:
-        # check if king in check
-
         # 1 remove both pieces
         board_copy = deepcopy(state.board)
         capture_pawn_pos = pos_f + 8 if state.turn == -1 else pos_f - 8
@@ -304,10 +300,11 @@ def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
     return False
 
 
-def get_direct_attacks(pos, piece, state: State) -> np.array:
+def get_direct_attacks(pos:int, piece:int, state: State) -> List[int]:
+    # TODO: get directs attacks is similar to get_allowed_moves_by_piece, reuse somehow?
 
     allowed_moves_by_piece = get_allowed_moves_by_piece(
-        pos, piece, ChessUtils.ATTACKED_OFFSET
+        pos, ChessUtils.ATTACKED_OFFSET[piece]
     )
     # When considering the update of attacked pieces, the turn is already updated (see sign)
     if abs(piece) in [3, 4, 5]:
@@ -341,11 +338,11 @@ def get_direct_attacks(pos, piece, state: State) -> np.array:
                     # blocked by piece, last attacked pos
                     dig_hor_moves.append(pos_1d)
                     break
-        attacked_poisitions = dig_hor_moves
+        attacked_positions = dig_hor_moves
 
     else:
-        attacked_poisitions = allowed_moves_by_piece
-    return attacked_poisitions
+        attacked_positions = allowed_moves_by_piece
+    return attacked_positions
 
 
 class Chess:
@@ -522,44 +519,34 @@ class Chess:
         color = 1 if self.state.board[pos_i] > 0 else -1
         if color != self.state.turn:
             raise ValueError("Invalid movement, this player cannot move this pice.")
-        if DEBUG:
-            self.print_allowed_moves(allowed_moves=allowed_moves, pos=pos_i)
         if allowed_moves is not None and pos_f not in allowed_moves:
             raise ValueError(
                 f"Invalid movement, piece: {ChessUtils.PIECE_DICT_INV[self.state.board[pos_i]]} cannot move to that position. Allowed moves: {allowed_moves,[ChessUtils.POSITION_DICT_INV[pos] for pos in allowed_moves]}"
             )
-        if DEBUG:
-            print(
-                f"It can move to {ChessUtils.POSITION_DICT_INV[pos_f], pos_f}. From availbale positions: {allowed_moves, [ChessUtils.POSITION_DICT_INV[pos] for pos in allowed_moves]}"
-            )
-
-
-def get_allowed_moves_by_piece(pos, piece, move_directions_offset):
+#@numba.jit(nopython=True)
+def get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     """Get allowed moves based only on piece related moves."""
+    # TODO: should probably optimize this, since it is called many times
 
     # we have to take into account limits of the board in the side, which complicates things if we use a 1D array for the board
-    pos_2d = np.unravel_index(pos, (8, 8))
-    empty_board = np.zeros((8, 8))
+    pos_2d = (pos // 8, pos % 8)
+    list_allowed: List[int] = []
 
-    piece = piece if abs(piece) == 1 else abs(piece)
-
-    for offset in move_directions_offset[piece]:
+    for offset in offsets:
         allowed_x = pos_2d[0] + offset[0]
         allowed_y = pos_2d[1] + offset[1]
         if (allowed_x < 0 or allowed_y < 0) or (allowed_x > 7 or allowed_y > 7):
             # out of bounds
             continue
+        # transform to 1d
+        list_allowed.append(allowed_x*8+allowed_y)
 
-        empty_board[allowed_x, allowed_y] = 1
-    return list(empty_board.ravel().nonzero()[0])
+    return list_allowed
 
 
-def check_if_positions_are_attacked(optimizer: Optimizer, positions: list):
+def check_if_positions_are_attacked(attacked_map: List, positions: list):
     """Check if a position is attacked by a piece of the opposite color."""
-    for pos in positions:
-        if pos in optimizer.attacked_map:
-            return True
-    return False
+    return any(pos in attacked_map  for pos in positions)
 
 
 def get_allowed_moves(
@@ -569,7 +556,7 @@ def get_allowed_moves(
     color = 1 if piece > 0 else -1
     # 1
     allowed_moves_by_piece = get_allowed_moves_by_piece(
-        pos, piece, ChessUtils.MOVE_DIRECTIONS_OFFSET
+        pos, ChessUtils.MOVE_DIRECTIONS_OFFSET[piece]
     )
     # 2 remove moves where end position is own piece
     allowed_moves = [
@@ -590,7 +577,7 @@ def get_allowed_moves(
         )
     # 5 Checks
     # if next possible move is to take king, ilegal move: inefficient but work
-    allowed_moves = get_check_illegal_moves_optimized(
+    allowed_moves = get_check_illegal_moves(
         state, pos, allowed_moves, optimizer
     )
 
@@ -611,7 +598,7 @@ def get_allowed_moves(
     return allowed_moves
 
 
-def get_check_illegal_moves_optimized(
+def get_check_illegal_moves(
     state: State, pos: int, allowed_moves: list, optimizer: Optimizer
 ):
     # the whole point is to avoid another depth
@@ -636,7 +623,7 @@ def get_castle_possibilities(board, color, castling_rights, optimizer) -> List[i
         ]
         if all(
             board[square_indexes] == squares_layout
-        ) and not check_if_positions_are_attacked(optimizer, positions):
+        ) and not check_if_positions_are_attacked(optimizer.attacked_map, positions):
             allowed_castle_moves.append(castle_type)
 
     return allowed_castle_moves
@@ -684,35 +671,23 @@ def get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
     allowed_push_moves = [move for move in push_moves if board[move] == 0]
     return allowed_diagonal_moves + allowed_push_moves
 
-
-# @numba.jit(nopython=True)
 def get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
     """Get index of trajectory between two positions"""
-    # TODO: is there a simpler way to do this?
-    index_trajectory: List[int] = []
-    if pos_i == pos_f:
-        return index_trajectory
-
-    # pos_2d_i= np.unravel_index(pos_i, (8,8))
-    # same as
-    pos_2d_i = (pos_i // 8, pos_i % 8)
-    pos_2d_f = (pos_f // 8, pos_f % 8)
-
-    # get direction
-    direction = np.array([pos_2d_f[0] - pos_2d_i[0], pos_2d_f[1] - pos_2d_i[1]])
-    # make it unit vector
-    direction[0] = 0 if direction[0] == 0 else direction[0] / abs(direction[0])
-    direction[1] = 0 if direction[1] == 0 else direction[1] / abs(direction[1])
-
-    # get index of trajectory
-    index_trajectory.append(pos_i)
-    cont = 0
-    while index_trajectory[-1] != pos_f:
-        index_trajectory.append(index_trajectory[-1] + direction[0] * 8 + direction[1])
-        cont += 1
-    return index_trajectory[1:-1]
-
-
+    # TODO: there is no check if trajectory can be computed
+    # Not super readable but way faster way of doing it
+    if pos_i % 8 == pos_f % 8:
+        # vertical
+        return list(range(pos_i, pos_f, 8*(1 if pos_i<pos_f else -1)))[1:]
+    elif pos_i // 8 == pos_f // 8:
+        # horizontal
+        return list(range(pos_i, pos_f, 1*(1 if pos_i<pos_f else -1)))[1:]
+    else:
+        # diagonal
+        if pos_i % 8 > pos_f % 8:
+            return list(range(pos_i, pos_f, 7 if pos_i<pos_f else -9))[1:]
+        else:
+            return list(range(pos_i, pos_f, 9 if pos_i<pos_f else -7))[1:]
+        
 def get_allowed_moves_in_state(state, optimizer=None):
     pieces_positions = np.where(state.board * state.turn > 0)[0]
     allowed_complete_moves = []
