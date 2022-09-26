@@ -4,3 +4,5 @@ dist/
 __pycache__
 .mypy_cache
 prof.txt
+prof_reference.txt
+prof_with_custom_deepcopy.txt

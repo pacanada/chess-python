@@ -88,6 +88,7 @@ positions, reference time 0.05 s with
 - 0.51 s removing np.unravel
 - 0.47 s using only lists in `get_allowed_moves_by_piece`
 - 0.39 s with revamped `get_index_trajectory`
+- 0.35 with custom `deepcopy`
 
 ## TODO:
 
@@ -99,3 +100,4 @@ positions, reference time 0.05 s with
     - cyclomatic complexity in `is_legal_move`
 - [x] Automate release with github action to pip
 - [ ] Explore pypy
+- [ ] Explore deepcopy for tree generation, it takes a lot of time

@@ -1,9 +1,7 @@
 from copy import deepcopy
-from functools import lru_cache
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import numba
 
 from chess_python.utils import parse_fen
 
@@ -132,6 +130,16 @@ class State:
         )
         self.half_move_clock: int = half_move_clock
         self.full_move_number: int = full_move_number
+
+    def __deepcopy__(self, memo: Dict[int, object]):
+        state = type(self)(None)
+        state.board = self.board.copy()
+        state.turn = self.turn
+        state.castling_rights = deepcopy(self.castling_rights)
+        state.en_passant_allowed = self.en_passant_allowed
+        state.half_move_clock = self.half_move_clock
+        state.full_move_number = self.full_move_number
+        return state
 
 
 class Optimizer:
@@ -346,10 +354,18 @@ def get_direct_attacks(pos:int, piece:int, state: State) -> List[int]:
 
 
 class Chess:
-    def __init__(self, fen: Optional[str] = None):
+    def __init__(self, fen: Optional[str] = None, run_optimizer=True):
         self.state = State(fen_string=fen)
-        self.optimizer = Optimizer(self.state)
+        self.optimizer = Optimizer(self.state) if run_optimizer else None
         self.move_combination: List[str] = []
+
+    def __deepcopy__(self, memo: Dict[int, object]):
+        """Creates a deepcopy of the board."""
+        chess = type(self)(None, False)
+        chess.state = deepcopy(self.state)
+        chess.optimizer = self.optimizer
+        chess.move_combination = self.move_combination
+        return chess
 
     def __repr__(self):
         """Nice representation of board state"""
