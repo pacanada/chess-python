@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import numba
 
 from chess_python.utils import parse_fen
 
@@ -179,16 +180,24 @@ class Optimizer:
 
             # if there is only one piece in the way, and is own, append to pin pieces
             is_only_one_piece = sum(state.board[index_trajectory] != 0) == 1
-            if is_only_one_piece:
-                is_own_piece = sum(state.board[index_trajectory]) * state.turn > 0
-                if is_own_piece:
-                    # TODO: simplify, ouch
-                    pin_pos = np.array(index_trajectory)[
-                        state.board[index_trajectory] != 0
+            is_two_opposite_pawns_in_rank_45 = king_pos // 8 in [3,4] and sum(state.board[index_trajectory])==0 and sum(abs(state.board[index_trajectory]))==2
+            is_own_piece = sum(state.board[index_trajectory]) * state.turn > 0
+            if is_two_opposite_pawns_in_rank_45:
+                # pinning en passant target pawn as well (to be used in is_en_passant_discover_check)
+                pin_pos = np.array(index_trajectory)[
+                        state.board[index_trajectory]*state.turn == -1
                     ][0]
-                    pin_positions.append(pin_pos)
-                    # enemy which is doing the pin
-                    self.pin_map_dict[pin_pos] = (pos, index_trajectory)
+                pin_positions.append(pin_pos)
+                # enemy which is doing the pin
+                self.pin_map_dict[pin_pos] = (pos, index_trajectory)
+
+            if is_only_one_piece and is_own_piece:
+                pin_pos = np.array(index_trajectory)[
+                    state.board[index_trajectory] != 0
+                ][0]
+                pin_positions.append(pin_pos)
+                # enemy which is doing the pin
+                self.pin_map_dict[pin_pos] = (pos, index_trajectory)
 
         return pin_positions
 
@@ -202,27 +211,23 @@ class Optimizer:
             piece = state.board[pos]
             direct_attacks = get_direct_attacks(pos, piece, state)
             self.attacked_map_dict[pos] = direct_attacks
-            # TODO: can we get rid of the array here?
             attacked_map = attacked_map + direct_attacks
         # probably duplicated
         return attacked_map
 
-    def is_move_legal(self, pos_f: int, pos: int, state: State) -> bool:  # noqa C901
+    def is_move_legal(self, pos_i: int, pos_f: int, state: State) -> bool:  # noqa C901
         # TODO: reduce cyclomatic complexity
         king_pos = np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
-        is_piece_a_king = abs(state.board[pos]) == 6
+        is_piece_a_king = abs(state.board[pos_i]) == 6
         if is_king_in_check:
             if is_piece_a_king:
-                if pos_f in self.attacked_map:
-                    return False
-                else:
-                    return True
+                return pos_f not in self.attacked_map
             else:
                 if (
                     pos_f in self.positions_atacking_king
                     and len(self.positions_atacking_king) < 2
-                ) and pos not in self.pin_map:
+                ) and pos_i not in self.pin_map:
                     return True
                 # also where the piece block check block
                 if abs(state.board[self.positions_atacking_king[0]]) in [3, 4, 5]:
@@ -242,21 +247,18 @@ class Optimizer:
                     return False
         else:
             if is_piece_a_king:
-                if pos_f in self.attacked_map:
-                    return False
-                else:
-                    return True
+                return pos_f not in self.attacked_map
             else:
-                if pos in self.pin_map:
+                if pos_i in self.pin_map:
                     # if it can move along the direction of the pin yes
-                    if pos_f in self.pin_map_dict[pos][1]:
+                    if pos_f in self.pin_map_dict[pos_i][1]:
                         return True
-                    if pos_f == self.pin_map_dict[pos][0]:
+                    if pos_f == self.pin_map_dict[pos_i][0]:
                         # taking enemy piece that is doing the pin
                         return True
                     else:
                         return False
-                elif is_en_passant_discovering_check_move(pos_f, pos, state):
+                elif is_en_passant_discovering_check_move(pos_i, pos_f, state, self.pin_map):
                     return False
                 else:
                     return True
@@ -269,43 +271,9 @@ class Optimizer:
         ]
 
 
-def is_en_passant_discovering_check_move(pos_f: int, pos: int, state: State):
-    # TODO: sure it could be simplified
-    if abs(state.board[pos]) == 1 and pos_f in state.en_passant_allowed:
-        # 1 remove both pieces
-        board_copy = deepcopy(state.board)
-        capture_pawn_pos = pos_f + 8 if state.turn == -1 else pos_f - 8
-        board_copy[pos] = 0
-        board_copy[capture_pawn_pos] = 0
-        # 2 and check if king in check
-        targets = list(range(24, 32)) if state.turn == -1 else list(range(32, 40))
-        if state.turn * 6 in board_copy[targets]:
-            king_pos = np.where(board_copy == state.turn * 6)[0][0]
-            # get the closest enemy piece
-            # which direction to check, direction form the king to capture pwan pos i the only one where there can be a check coming
-            direction = 1 if (capture_pawn_pos - king_pos) > 0 else -1
-            # check_position = king_pos + direction
-            # missing king is attacked
-            targets_array = np.array(targets)
-            king_index_in_target = np.where(targets_array == king_pos)[0][0]
-            sorted_targets = (
-                targets_array[king_index_in_target + 1 :]
-                if direction == 1
-                else np.flip(targets_array[:king_index_in_target])
-            )
-
-            for check_position in sorted_targets:
-                if board_copy[check_position] * state.turn > 0 or abs(
-                    board_copy[check_position]
-                ) in [1, 2, 6]:
-                    break  # own piece, do not continue, or enemypiece but cannot attack own king
-                elif board_copy[check_position] * state.turn == 0:
-                    continue
-                elif board_copy[check_position] * state.turn < 0 and abs(
-                    board_copy[check_position]
-                ) in [3, 4, 5]:
-                    return True
-    return False
+def is_en_passant_discovering_check_move(pos_i: int, pos_f: int, state: State, pin_map):
+    capture_pawn_pos = pos_f + 8 if state.turn == -1 else pos_f - 8
+    return abs(state.board[pos_i]) == 1 and pos_f in state.en_passant_allowed and capture_pawn_pos in pin_map
 
 
 def get_direct_attacks(pos:int, piece:int, state: State) -> List[int]:
@@ -539,7 +507,6 @@ class Chess:
             raise ValueError(
                 f"Invalid movement, piece: {ChessUtils.PIECE_DICT_INV[self.state.board[pos_i]]} cannot move to that position. Allowed moves: {allowed_moves,[ChessUtils.POSITION_DICT_INV[pos] for pos in allowed_moves]}"
             )
-#@numba.jit(nopython=True)
 def get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     """Get allowed moves based only on piece related moves."""
     # TODO: should probably optimize this, since it is called many times
@@ -619,7 +586,7 @@ def get_check_illegal_moves(
 ):
     # the whole point is to avoid another depth
     allowed_moves_optimized = [
-        pos_f for pos_f in allowed_moves if optimizer.is_move_legal(pos_f, pos, state)
+        pos_f for pos_f in allowed_moves if optimizer.is_move_legal(pos_i=pos, pos_f=pos_f, state=state)
     ]
     return allowed_moves_optimized
 
