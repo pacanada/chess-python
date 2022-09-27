@@ -1,17 +1,40 @@
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import numba
+import numpy as np
 
 from chess_python.utils import parse_fen
 
+
 class ChessUtils:
-    KNIGHT_OFFSETS = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, -2], [1, 2], [-1, 2], [-1, -2]]
-    BISHOP_OFFSETS = [[i, i] for i in range(-7, 8) if i!=0] + [[i, -i] for i in range(-7, 8) if i!=0]
-    ROOK_OFFSETS = [[i, 0] for i in range(-7, 8) if i!=0] + [[0, i] for i in range(-7, 8) if i!=0]
+    KNIGHT_OFFSETS = [
+        [2, 1],
+        [2, -1],
+        [-2, 1],
+        [-2, -1],
+        [1, -2],
+        [1, 2],
+        [-1, 2],
+        [-1, -2],
+    ]
+    BISHOP_OFFSETS = [[i, i] for i in range(-7, 8) if i != 0] + [
+        [i, -i] for i in range(-7, 8) if i != 0
+    ]
+    ROOK_OFFSETS = [[i, 0] for i in range(-7, 8) if i != 0] + [
+        [0, i] for i in range(-7, 8) if i != 0
+    ]
     QUEEN_OFFSETS = BISHOP_OFFSETS + ROOK_OFFSETS
-    KING_OFFSETS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]
+    KING_OFFSETS = [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1],
+    ]
     MOVE_DIRECTIONS_OFFSET = {
         1: [[1, 0], [1, 1], [1, -1], [2, 0]],
         -1: [[-1, 0], [-1, -1], [-1, 1], [-2, 0]],  # inverted pawn moves
@@ -24,7 +47,7 @@ class ChessUtils:
         5: QUEEN_OFFSETS,
         -5: QUEEN_OFFSETS,
         6: KING_OFFSETS,
-        -6: KING_OFFSETS
+        -6: KING_OFFSETS,
     }
     ATTACKED_OFFSET = MOVE_DIRECTIONS_OFFSET.copy()
     ATTACKED_OFFSET[1] = [[1, 1], [1, -1]]
@@ -180,13 +203,17 @@ class Optimizer:
 
             # if there is only one piece in the way, and is own, append to pin pieces
             is_only_one_piece = sum(state.board[index_trajectory] != 0) == 1
-            is_two_opposite_pawns_in_rank_45 = king_pos // 8 in [3,4] and sum(state.board[index_trajectory])==0 and sum(abs(state.board[index_trajectory]))==2
+            is_two_opposite_pawns_in_rank_45 = (
+                king_pos // 8 in [3, 4]
+                and sum(state.board[index_trajectory]) == 0
+                and sum(abs(state.board[index_trajectory])) == 2
+            )
             is_own_piece = sum(state.board[index_trajectory]) * state.turn > 0
             if is_two_opposite_pawns_in_rank_45:
                 # pinning en passant target pawn as well (to be used in is_en_passant_discover_check)
                 pin_pos = np.array(index_trajectory)[
-                        state.board[index_trajectory]*state.turn == -1
-                    ][0]
+                    state.board[index_trajectory] * state.turn == -1
+                ][0]
                 pin_positions.append(pin_pos)
                 # enemy which is doing the pin
                 self.pin_map_dict[pin_pos] = (pos, index_trajectory)
@@ -217,51 +244,41 @@ class Optimizer:
 
     def is_move_legal(self, pos_i: int, pos_f: int, state: State) -> bool:  # noqa C901
         # TODO: reduce cyclomatic complexity
+        is_piece_a_king = abs(state.board[pos_i]) == 6
+        if is_piece_a_king:
+            return pos_f not in self.attacked_map
+
         king_pos = np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
-        is_piece_a_king = abs(state.board[pos_i]) == 6
-        if is_king_in_check:
-            if is_piece_a_king:
-                return pos_f not in self.attacked_map
-            else:
-                if (
-                    pos_f in self.positions_atacking_king
-                    and len(self.positions_atacking_king) < 2
-                ) and pos_i not in self.pin_map:
-                    return True
-                # also where the piece block check block
-                if abs(state.board[self.positions_atacking_king[0]]) in [3, 4, 5]:
-                    # only in the case of bishop, rook or queen attck can be block
-                    possible_blocking_trajectories = get_index_trajectory(
-                        pos_i=king_pos, pos_f=self.positions_atacking_king[0]
-                    )
-                else:
-                    possible_blocking_trajectories = []
 
-                if (
-                    len(self.positions_atacking_king) < 2
-                    and pos_f in possible_blocking_trajectories
-                ):
-                    return True
-                else:
-                    return False
-        else:
-            if is_piece_a_king:
-                return pos_f not in self.attacked_map
+        if is_king_in_check:
+            if (
+                pos_f in self.positions_atacking_king
+                and len(self.positions_atacking_king) < 2
+            ) and pos_i not in self.pin_map:
+                return True
+            # also where the piece block check
+            if abs(state.board[self.positions_atacking_king[0]]) in [3, 4, 5]:
+                # only in the case of bishop, rook or queen attck can be block
+                possible_blocking_trajectories = get_index_trajectory(
+                    pos_i=king_pos, pos_f=self.positions_atacking_king[0]
+                )
             else:
-                if pos_i in self.pin_map:
-                    # if it can move along the direction of the pin yes
-                    if pos_f in self.pin_map_dict[pos_i][1]:
-                        return True
-                    if pos_f == self.pin_map_dict[pos_i][0]:
-                        # taking enemy piece that is doing the pin
-                        return True
-                    else:
-                        return False
-                elif is_en_passant_discovering_check_move(pos_i, pos_f, state, self.pin_map):
-                    return False
-                else:
-                    return True
+                possible_blocking_trajectories = []
+
+            return (
+                len(self.positions_atacking_king) < 2
+                and pos_f in possible_blocking_trajectories
+            )
+        else:
+            if pos_i in self.pin_map:
+                is_along_pinned_squares = pos_f in self.pin_map_dict[pos_i][1]
+                is_capturing_attacking_piece = pos_f == self.pin_map_dict[pos_i][0]
+                return is_along_pinned_squares or is_capturing_attacking_piece
+            else:
+                return not is_en_passant_discovering_check_move(
+                    pos_i, pos_f, state, self.pin_map
+                )
 
     def get_positions_of_attacking_pieces(self, target_pos: int):
         return [
@@ -273,10 +290,14 @@ class Optimizer:
 
 def is_en_passant_discovering_check_move(pos_i: int, pos_f: int, state: State, pin_map):
     capture_pawn_pos = pos_f + 8 if state.turn == -1 else pos_f - 8
-    return abs(state.board[pos_i]) == 1 and pos_f in state.en_passant_allowed and capture_pawn_pos in pin_map
+    return (
+        abs(state.board[pos_i]) == 1
+        and pos_f in state.en_passant_allowed
+        and capture_pawn_pos in pin_map
+    )
 
 
-def get_direct_attacks(pos:int, piece:int, state: State) -> List[int]:
+def get_direct_attacks(pos: int, piece: int, state: State) -> List[int]:
     # TODO: get directs attacks is similar to get_allowed_moves_by_piece, reuse somehow?
 
     allowed_moves_by_piece = get_allowed_moves_by_piece(
@@ -507,6 +528,8 @@ class Chess:
             raise ValueError(
                 f"Invalid movement, piece: {ChessUtils.PIECE_DICT_INV[self.state.board[pos_i]]} cannot move to that position. Allowed moves: {allowed_moves,[ChessUtils.POSITION_DICT_INV[pos] for pos in allowed_moves]}"
             )
+
+
 def get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     """Get allowed moves based only on piece related moves."""
     # TODO: should probably optimize this, since it is called many times
@@ -522,14 +545,14 @@ def get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
             # out of bounds
             continue
         # transform to 1d
-        list_allowed.append(allowed_x*8+allowed_y)
+        list_allowed.append(allowed_x * 8 + allowed_y)
 
     return list_allowed
 
 
 def check_if_positions_are_attacked(attacked_map: List, positions: list):
     """Check if a position is attacked by a piece of the opposite color."""
-    return any(pos in attacked_map  for pos in positions)
+    return any(pos in attacked_map for pos in positions)
 
 
 def get_allowed_moves(
@@ -560,9 +583,7 @@ def get_allowed_moves(
         )
     # 5 Checks
     # if next possible move is to take king, ilegal move: inefficient but work
-    allowed_moves = get_check_illegal_moves(
-        state, pos, allowed_moves, optimizer
-    )
+    allowed_moves = get_check_illegal_moves(state, pos, allowed_moves, optimizer)
 
     # 6 Castling
     if abs(piece) == 6:
@@ -586,7 +607,9 @@ def get_check_illegal_moves(
 ):
     # the whole point is to avoid another depth
     allowed_moves_optimized = [
-        pos_f for pos_f in allowed_moves if optimizer.is_move_legal(pos_i=pos, pos_f=pos_f, state=state)
+        pos_f
+        for pos_f in allowed_moves
+        if optimizer.is_move_legal(pos_i=pos, pos_f=pos_f, state=state)
     ]
     return allowed_moves_optimized
 
@@ -654,23 +677,25 @@ def get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
     allowed_push_moves = [move for move in push_moves if board[move] == 0]
     return allowed_diagonal_moves + allowed_push_moves
 
+
 def get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
     """Get index of trajectory between two positions"""
     # TODO: there is no check if trajectory can be computed
     # Not super readable but way faster way of doing it
     if pos_i % 8 == pos_f % 8:
         # vertical
-        return list(range(pos_i, pos_f, 8*(1 if pos_i<pos_f else -1)))[1:]
+        return list(range(pos_i, pos_f, 8 * (1 if pos_i < pos_f else -1)))[1:]
     elif pos_i // 8 == pos_f // 8:
         # horizontal
-        return list(range(pos_i, pos_f, 1*(1 if pos_i<pos_f else -1)))[1:]
+        return list(range(pos_i, pos_f, 1 * (1 if pos_i < pos_f else -1)))[1:]
     else:
         # diagonal
         if pos_i % 8 > pos_f % 8:
-            return list(range(pos_i, pos_f, 7 if pos_i<pos_f else -9))[1:]
+            return list(range(pos_i, pos_f, 7 if pos_i < pos_f else -9))[1:]
         else:
-            return list(range(pos_i, pos_f, 9 if pos_i<pos_f else -7))[1:]
-        
+            return list(range(pos_i, pos_f, 9 if pos_i < pos_f else -7))[1:]
+
+
 def get_allowed_moves_in_state(state, optimizer=None):
     pieces_positions = np.where(state.board * state.turn > 0)[0]
     allowed_complete_moves = []

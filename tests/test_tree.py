@@ -45,7 +45,13 @@ def perft_of_positions():
             "depth": 4,
             "fen": "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
         },
-        5: {"name": "init_position", "n_nodes": 197281, "approx_time":1.23, "depth": 4, "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
+        5: {
+            "name": "init_position",
+            "n_nodes": 197281,
+            "approx_time": 1.23,
+            "depth": 4,
+            "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        },
     }
 
 
