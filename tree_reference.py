@@ -52,8 +52,8 @@ def get_children(game, depth, move):
         return []
     if move is not None:
         game.push_uci(move)
-    #allowed_moves_i_f = sorted([move.uci() for move in game.legal_moves])
-    allowed_moves_i_f =[move.uci() for move in game.legal_moves]
+    # allowed_moves_i_f = sorted([move.uci() for move in game.legal_moves])
+    allowed_moves_i_f = [move.uci() for move in game.legal_moves]
     children = []
     for move in allowed_moves_i_f:
         children.append(Node(game, depth - 1, move))
@@ -84,4 +84,4 @@ if __name__ == "__main__":
         move_combination = get_move_combination(node)
 
         with open(f"moves_reference.json", "w") as f:
-           json.dump(move_combination, f)
+            json.dump(move_combination, f)

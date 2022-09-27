@@ -36,7 +36,7 @@ DICT_POSITIONS = {
         "depth": 4,
         "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     },
- }
+}
 
 
 class Node:
@@ -84,4 +84,4 @@ if __name__ == "__main__":
         print(f"Size of own tree {get_size_node(node)}, Elapsed time {(t2-t1):.2f} s")
         move_combination = get_move_combination(node)
         with open(f"moves_own.json", "w") as f:
-           json.dump(move_combination, f)
+            json.dump(move_combination, f)
