@@ -171,7 +171,7 @@ class Optimizer:
 
     def __init__(self, state: State):
         self.attacked_map_dict: Dict[int, np.array] = {}  # convenient function
-        self.pin_map_dict: Dict[int, np.array] = {}
+        self.pin_map_dict: Dict[int, Tuple[int, List[int]]] = {}
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
         self.positions_atacking_king = self.get_positions_of_attacking_pieces(
@@ -250,26 +250,15 @@ class Optimizer:
 
         king_pos = np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
+        is_only_one_piece_attacking = len(self.positions_atacking_king) == 1
 
         if is_king_in_check:
-            if (
-                pos_f in self.positions_atacking_king
-                and len(self.positions_atacking_king) < 2
-            ) and pos_i not in self.pin_map:
+            if pos_f in self.positions_atacking_king and is_only_one_piece_attacking and pos_i not in self.pin_map:
                 return True
-            # also where the piece block check
-            if abs(state.board[self.positions_atacking_king[0]]) in [3, 4, 5]:
-                # only in the case of bishop, rook or queen attck can be block
-                possible_blocking_trajectories = get_index_trajectory(
-                    pos_i=king_pos, pos_f=self.positions_atacking_king[0]
-                )
             else:
-                possible_blocking_trajectories = []
-
-            return (
-                len(self.positions_atacking_king) < 2
-                and pos_f in possible_blocking_trajectories
-            )
+                # also where the piece block check
+                blocking_check_positions = self.get_blocking_check_positions(state, king_pos)
+                return is_only_one_piece_attacking and pos_f in blocking_check_positions
         else:
             if pos_i in self.pin_map:
                 is_along_pinned_squares = pos_f in self.pin_map_dict[pos_i][1]
@@ -279,6 +268,18 @@ class Optimizer:
                 return not is_en_passant_discovering_check_move(
                     pos_i, pos_f, state, self.pin_map
                 )
+
+    def get_blocking_check_positions(self, state: State, king_pos: int)-> List[int]:
+        pos_attacking_king = self.positions_atacking_king[0]
+        if state.board[pos_attacking_king]*state.turn in [-3, -4, -5]:
+            # only in the case of bishop, rook or queen attack can be block
+            blocking_check_positions = get_index_trajectory(
+                pos_i=king_pos, pos_f=pos_attacking_king
+            )
+        else:
+            blocking_check_positions = []
+        return blocking_check_positions
+
 
     def get_positions_of_attacking_pieces(self, target_pos: int):
         return [
