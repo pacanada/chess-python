@@ -76,12 +76,12 @@ def get_move_combination(node):
 
 
 if __name__ == "__main__":
-    for k, v in DICT_POSITIONS.items():
+    for _, v in DICT_POSITIONS.items():
         print("Evaluating position {}".format(v["name"]))
         t1 = time.time()
-        node = Node(Chess(v["fen"]), v["depth"])
+        node = Node(Chess(v["fen"]), v["depth"])  # type: ignore[arg-type]
         t2 = time.time()
         print(f"Size of own tree {get_size_node(node)}, Elapsed time {(t2-t1):.2f} s")
         move_combination = get_move_combination(node)
-        with open(f"moves_own.json", "w") as f:
+        with open("moves_own.json", "w") as f:
             json.dump(move_combination, f)

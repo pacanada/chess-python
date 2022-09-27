@@ -152,7 +152,7 @@ class State:
         self.half_move_clock: int = half_move_clock
         self.full_move_number: int = full_move_number
 
-    def __deepcopy__(self, memo: Dict[int, object]):
+    def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         state = type(self)(None)
         state.board = self.board.copy()
         state.turn = self.turn
@@ -243,7 +243,7 @@ class Optimizer:
         # initialize to zero
         self.attacked_map_dict = {}
 
-        attacked_map: List[List[int]] = []
+        attacked_map: List[int] = []
         enemy_positions = [
             pos for pos, piece in enumerate(state.board) if piece * state.turn < 0
         ]
@@ -367,7 +367,7 @@ class Chess:
         self.optimizer = Optimizer(self.state) if run_optimizer else None
         self.move_combination: List[str] = []
 
-    def __deepcopy__(self, memo: Dict[int, object]):
+    def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
         chess = type(self)(None, False)
         chess.state = deepcopy(self.state)

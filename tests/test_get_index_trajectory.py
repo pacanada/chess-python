@@ -14,7 +14,7 @@ def diagonal_cases():
 
 
 def test_indexes(diagonal_cases):
-    for k, v in diagonal_cases.items():
+    for _, v in diagonal_cases.items():
         pos_i = v["pos_i"]
         pos_f = v["pos_f"]
         expected = v["trajectory"]
