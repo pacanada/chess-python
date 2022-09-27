@@ -83,12 +83,13 @@ positions, reference time 0.05 s with
 - 1.25 s (first)
 - 0.79 s (moving `get_positions_attacking_pieces` to optimizer initialization and update, not when
   checking if move is legal)
-- 0.70 s removing np.array from list of moves (does not make a lot of sense)
+- 0.70 s removing `np.array` from list of moves (does not make a lot of sense)
 - 0.55 s removing more np.arrays
 - 0.51 s removing np.unravel
 - 0.47 s using only lists in `get_allowed_moves_by_piece`
 - 0.39 s with revamped `get_index_trajectory`
 - 0.35 with custom `deepcopy`
+- 0.18 s with using list for board instead of numpy!!
 
 ## TODO:
 

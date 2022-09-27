@@ -137,7 +137,7 @@ class State:
             half_move_clock,
             full_move_number,
         ) = parse_fen(fen_string, ChessUtils.PIECE_DICT)
-        self.board: np.array = board
+        self.board: List[int] = list(board)
         self.turn: int = turn
         self.castling_rights: List[int] = (
             [ChessUtils.CASTLING_ENCODING[cast] for cast in castling_rights]
@@ -170,28 +170,29 @@ class Optimizer:
     """In this class we keep track of positions attacked by enemy, and pin pieces"""
 
     def __init__(self, state: State):
-        self.attacked_map_dict: Dict[int, np.array] = {}  # convenient function
+        self.attacked_map_dict: Dict[int, List[int]] = {}  # convenient function
         self.pin_map_dict: Dict[int, Tuple[int, List[int]]] = {}
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
-        self.positions_atacking_king = self.get_positions_of_attacking_pieces(
-            np.where(state.board == state.turn * 6)[0][0]
+        self.positions_atacking_king = self.get_positions_of_attacking_pieces(state.board.index(state.turn*6)
+            #np.where(state.board == state.turn * 6)[0][0]
         )
 
     def update(self, state: State):
         self.pin_map = self.update_pin_map(state)
         self.attacked_map = self.update_attacked_map(state)
-        self.positions_atacking_king = self.get_positions_of_attacking_pieces(
-            np.where(state.board == state.turn * 6)[0][0]
+        self.positions_atacking_king = self.get_positions_of_attacking_pieces(state.board.index(state.turn*6)
+            #np.where(state.board == state.turn * 6)[0][0]
         )
 
     def update_pin_map(self, state: State):
         pin_positions = []
         # only the ones that can attack in diagonal or direct more than one square
-        king_pos = np.where(state.board == state.turn * 6)[0][0]
-        enemy_positions = np.where(
-            (state.board * state.turn <= -3) & (state.board * state.turn >= -5)
-        )[0]
+        king_pos = state.board.index(state.turn*6) #np.where(state.board == state.turn * 6)[0][0]
+        enemy_positions = [pos for pos, piece in enumerate(state.board) if piece*state.turn <=-3 and piece*state.turn>=-5]
+        #np.where(
+         #   (state.board * state.turn <= -3) & (state.board * state.turn >= -5)
+        #)[0]
         for pos in enemy_positions:
             if king_pos in get_allowed_moves_by_piece(
                 pos, ChessUtils.MOVE_DIRECTIONS_OFFSET[state.board[pos]]
@@ -202,25 +203,29 @@ class Optimizer:
                 continue
 
             # if there is only one piece in the way, and is own, append to pin pieces
-            is_only_one_piece = sum(state.board[index_trajectory] != 0) == 1
+            is_only_one_piece = len([state.board[pos] for pos in index_trajectory if state.board[pos]!=0])==1 #: #sum(state.board[index_trajectory] != 0) == 1
+            # TODO: not the right wording
+            is_own_piece = sum([state.board[pos] for pos in index_trajectory]) * state.turn > 0
             is_two_opposite_pawns_in_rank_45 = (
                 king_pos // 8 in [3, 4]
-                and sum(state.board[index_trajectory]) == 0
-                and sum(abs(state.board[index_trajectory])) == 2
+                and sum([state.board[pos] for pos in index_trajectory]) == 0
+                and sum([abs(state.board[pos]) for pos in index_trajectory]) == 2
             )
-            is_own_piece = sum(state.board[index_trajectory]) * state.turn > 0
+            #is_own_piece = sum(state.board[index_trajectory]) * state.turn > 0
+            np_board = np.array(state.board, int)
             if is_two_opposite_pawns_in_rank_45:
                 # pinning en passant target pawn as well (to be used in is_en_passant_discover_check)
-                pin_pos = np.array(index_trajectory)[
-                    state.board[index_trajectory] * state.turn == -1
+
+                pin_pos = np.array(index_trajectory, int)[
+                    np_board[index_trajectory] * state.turn == -1
                 ][0]
                 pin_positions.append(pin_pos)
                 # enemy which is doing the pin
                 self.pin_map_dict[pin_pos] = (pos, index_trajectory)
 
             if is_only_one_piece and is_own_piece:
-                pin_pos = np.array(index_trajectory)[
-                    state.board[index_trajectory] != 0
+                pin_pos = np.array(index_trajectory, int)[
+                    np_board[index_trajectory] != 0
                 ][0]
                 pin_positions.append(pin_pos)
                 # enemy which is doing the pin
@@ -233,7 +238,7 @@ class Optimizer:
         self.attacked_map_dict = {}
 
         attacked_map: List[List[int]] = []
-        enemy_positions = np.where(state.board * state.turn < 0)[0]
+        enemy_positions = [pos for pos, piece in enumerate(state.board) if piece*state.turn < 0]#np.where(state.board * state.turn < 0)[0]
         for pos in enemy_positions:
             piece = state.board[pos]
             direct_attacks = get_direct_attacks(pos, piece, state)
@@ -248,7 +253,7 @@ class Optimizer:
         if is_piece_a_king:
             return pos_f not in self.attacked_map
 
-        king_pos = np.where(state.board == state.turn * 6)[0][0]
+        king_pos = state.board.index(state.turn*6)#np.where(state.board == state.turn * 6)[0][0]
         is_king_in_check = king_pos in self.attacked_map
         is_only_one_piece_attacking = len(self.positions_atacking_king) == 1
 
@@ -629,7 +634,7 @@ def get_castle_possibilities(board, color, castling_rights, optimizer) -> List[i
             "positions_should_not_attacked"
         ]
         if all(
-            board[square_indexes] == squares_layout
+            [board[index]==squares_layout[i] for i, index in enumerate(square_indexes)] #board[square_indexes] == squares_layout
         ) and not check_if_positions_are_attacked(optimizer.attacked_map, positions):
             allowed_castle_moves.append(castle_type)
 
@@ -643,7 +648,7 @@ def get_blocked_illegal_moves(
     get_blocked_illegal_moves = []
     for move in allowed_moves:
         index_trajectory = get_index_trajectory(pos_i=pos, pos_f=move)
-        if abs(board[index_trajectory]).sum() > 0:
+        if sum([abs(board[pos]) for pos in index_trajectory])>0: #abs(board[index_trajectory]).sum() > 0:
             get_blocked_illegal_moves.append(move)
     return get_blocked_illegal_moves
 
@@ -698,7 +703,7 @@ def get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
 
 
 def get_allowed_moves_in_state(state, optimizer=None):
-    pieces_positions = np.where(state.board * state.turn > 0)[0]
+    pieces_positions = [pos for pos, piece in enumerate(state.board) if piece*state.turn > 0] #np.where(state.board * state.turn > 0)[0]
     allowed_complete_moves = []
     for pos_i in pieces_positions:
         allowed_moves = get_allowed_moves(

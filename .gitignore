@@ -6,3 +6,4 @@ __pycache__
 prof.txt
 prof_reference.txt
 prof_with_custom_deepcopy.txt
+*.json

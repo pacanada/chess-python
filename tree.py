@@ -1,3 +1,4 @@
+import json
 import time
 from copy import deepcopy
 from typing import Optional
@@ -35,7 +36,7 @@ DICT_POSITIONS = {
         "depth": 4,
         "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     },
-}
+ }
 
 
 class Node:
@@ -51,6 +52,8 @@ def get_children(game, depth, move):
         return []
     if move is not None:
         game.move(move)
+    # for ordering and comparing
+    # allowed_moves_i_f= sorted(game.legal_moves())
     allowed_moves_i_f = game.legal_moves()
     children = []
     for move in allowed_moves_i_f:
@@ -80,3 +83,5 @@ if __name__ == "__main__":
         t2 = time.time()
         print(f"Size of own tree {get_size_node(node)}, Elapsed time {(t2-t1):.2f} s")
         move_combination = get_move_combination(node)
+        with open(f"moves_own.json", "w") as f:
+           json.dump(move_combination, f)

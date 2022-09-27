@@ -12,7 +12,7 @@ def parse_fen(
     if fen_string is None:
         # default
         fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
-    board = np.zeros(64)
+    board = np.zeros(64, dtype=int)
     # Split the string into parts
     parts = fen_string.split(" ")
     # Parse the board
