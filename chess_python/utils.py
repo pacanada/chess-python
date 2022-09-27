@@ -1,18 +1,16 @@
-from typing import Optional, Tuple
-
-import numpy as np
+from typing import List, Optional, Tuple
 
 
 def parse_fen(
     fen_string: Optional[str], piece_dict: dict
-) -> Tuple[np.array, int, str, str, int, int]:
+) -> Tuple[List[int], int, str, str, int, int]:
     """Parse a FEN string to a board, turn, castling rights, en passant square, half move clock, full move number.
     fen_string=rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1.
     """
     if fen_string is None:
         # default
         fen_string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0"
-    board = np.zeros(64, dtype=int)
+    board = [0] * 64
     # Split the string into parts
     parts = fen_string.split(" ")
     # Parse the board
@@ -22,7 +20,9 @@ def parse_fen(
         offset = 0
         for square in rank:
             if square.isdigit():
-                board[64 - (j + 1) * 8 + (offset) : (offset + int(square))] = 0
+                i0 = 64 - (j + 1) * 8 + (offset)
+                i1 = offset + int(square)
+                board[i0:i1] = [0] * (i1 - i0)
                 offset += int(square)
             else:
                 board[64 - (j + 1) * 8 + offset] = piece_dict[square]
