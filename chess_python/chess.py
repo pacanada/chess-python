@@ -599,7 +599,6 @@ def _get_allowed_moves(
             board, pos, allowed_moves, color, en_passant_allowed
         )
     # 5 Checks
-    # if next possible move is to take king, ilegal move: inefficient but work
     allowed_moves = _get_check_illegal_moves(state, pos, allowed_moves, optimizer)
 
     # 6 Castling
@@ -716,7 +715,7 @@ def _get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
             return list(range(pos_i, pos_f, 9 if pos_i < pos_f else -7))[1:]
 
 
-def _get_allowed_moves_in_state(state: State, optimizer=None):
+def _get_allowed_moves_in_state(state: State, optimizer: Optimizer) -> List[str]:
     pieces_positions = [
         pos for pos, piece in enumerate(state.board) if piece * state.turn > 0
     ]

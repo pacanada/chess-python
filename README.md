@@ -90,11 +90,12 @@ positions, reference time 0.05 s with
 - 0.39 s with revamped `get_index_trajectory`
 - 0.35 with custom `deepcopy`
 - 0.18 s with using list for board instead of numpy!!
+- 0.15 s further tweaks
 
 ## TODO:
 
 - [x] Include tests for perft in different positions
-- [ ] Include utils if there is a mismatch in positions tree with reference implementation
+- [x] Include utils if there is a mismatch in positions tree with reference implementation
 - [ ] Improve performance
 - [ ] Improve overall code quality (clarity, choose right data structure for the job):
   - Public vs private functions
