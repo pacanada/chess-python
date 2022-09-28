@@ -101,4 +101,6 @@ positions, reference time 0.05 s with
   - cyclomatic complexity in `is_legal_move`
 - [x] Automate release with github action to pip
 - [ ] Explore pypy
-- [ ] Explore deepcopy for tree generation, it takes a lot of time
+- [x] Explore deepcopy for tree generation, it takes a lot of time (only copying board improves
+      performance)
+- [ ] Simplify castling

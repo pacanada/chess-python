@@ -89,14 +89,10 @@ class ChessUtils:
     }
     POSITION_DICT_INV = {v: k for k, v in POSITION_DICT.items()}
     CASTLING_ENCODING = {"Q": 0, "K": 1, "q": 2, "k": 3}
-    CASTLING_PER_COLOR = {1: [0, 1], -1: [2, 3]}
-    # castling type, piece_type, allowed_moves (init, final)
-    CASTLING_POS = {
-        0: {6: [4, 2], 4: [0, 3]},
-        1: {6: [4, 6], 4: [7, 5]},
-        2: {6: [60, 58], 4: [56, 59]},
-        3: {6: [60, 62], 4: [59, 61]},
-    }
+    # castling type, allowed_moves (init, final) (only for king)
+    CASTLING_POS = {0: [4, 2], 1: [4, 6], 2: [60, 58], 3: [60, 62]}
+    CASTLING_CODES_BY_COLOR = {1: [0, 1], -1: [2, 3]}
+    CASTLING_ROOK_INITIAL_POS_BY_COLOR = {1: [0, 8], -1: [56, 63]}
     CASTLING_UTILS = {
         0: {
             "square_indexes": [0, 1, 2, 3, 4],
@@ -307,7 +303,9 @@ class Optimizer:
         ]
 
 
-def _is_en_passant_discovering_check_move(pos_i: int, pos_f: int, state: State, pin_map):
+def _is_en_passant_discovering_check_move(
+    pos_i: int, pos_f: int, state: State, pin_map
+):
     capture_pawn_pos = pos_f + 8 if state.turn == -1 else pos_f - 8
     return (
         abs(state.board[pos_i]) == 1
@@ -432,7 +430,7 @@ class Chess:
             board_allowed = [1 for pos in pos in board_empty if pos in allowed_moves]
         v = ["O" if sq == 1 else " " for sq in board_allowed]
         v[pos] = ChessUtils.PIECE_DICT_INV[self.state.board[pos]]
-        repr_str = self.build_representation(v)
+        repr_str = self._build_representation(v)
 
         print("Allowed moves\n" + repr_str)
 
@@ -498,16 +496,16 @@ class Chess:
             self.state.en_passant_allowed.append(pos_f + 8)
 
     def _update_castling_rights(self, piece, piece_color, pos_i):
+        castling_codes = ChessUtils.CASTLING_CODES_BY_COLOR[piece_color]
+        rook_inital_posisitions = ChessUtils.CASTLING_CODES_BY_COLOR[piece_color]
         if abs(piece) == 6:
-            if piece_color == 1 and 1 in self.state.castling_rights:
-                self.state.castling_rights.remove(1)
-            elif piece_color == -1 and 3 in self.state.castling_rights:
-                self.state.castling_rights.remove(3)
-        elif abs(piece) == 4:
-            if piece_color == 1 and pos_i == 63 and 2 in self.state.castling_rights:
-                self.state.castling_rights.remove(2)
-            elif piece_color == -1 and pos_i == 56 and 0 in self.state.castling_rights:
-                self.state.castling_rights.remove(0)
+            for cast_code in castling_codes:
+                if cast_code in self.state.castling_rights:
+                    self.state.castling_rights.remove(cast_code)
+        if abs(piece) == 4:
+            for cast_code, pos_rook in zip(castling_codes, rook_inital_posisitions):
+                if cast_code in self.state.castling_rights and pos_i == pos_rook:
+                    self.state.castling_rights.remove(cast_code)
 
     def _convert_move_to_ints(
         self, move: Union[str, List]
@@ -569,7 +567,7 @@ def _get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     return list_allowed
 
 
-def _check_if_positions_are_attacked(attacked_map: List, positions: list):
+def _check_if_positions_are_attacked(attacked_map: List[int], positions: list):
     """Check if a position is attacked by a piece of the opposite color."""
     return any(pos in attacked_map for pos in positions)
 
@@ -606,41 +604,18 @@ def _get_allowed_moves(
 
     # 6 Castling
     if abs(piece) == 6:
-        # in this case we dont want allowe by default the two files move of the king, we treat castling separately
-        # TODO: probably duplicated with get_castl_possibilities?
-        castle_types_allowed = _get_castle_possibilities(
-            board, color, castling_rights, optimizer
-        )
-        castling_positions_allowed = [
-            ChessUtils.CASTLING_POS[castle_type_allowed][abs(piece)][1]
-            for castle_type_allowed in castle_types_allowed
-            if pos == ChessUtils.CASTLING_POS[castle_type_allowed][abs(piece)][0]
-        ]
-        allowed_moves = allowed_moves + castling_positions_allowed
+        # in this case we dont want allowed by default the two files move of the king, we treat castling separately
+        castle_king_moves = _get_castle_king_moves(board, castling_rights, optimizer)
+        allowed_moves = allowed_moves + castle_king_moves
 
     return allowed_moves
 
 
-def _get_check_illegal_moves(
-    state: State, pos: int, allowed_moves: list, optimizer: Optimizer
-):
-    # the whole point is to avoid another depth
-    allowed_moves_optimized = [
-        pos_f
-        for pos_f in allowed_moves
-        if optimizer._is_move_legal(pos_i=pos, pos_f=pos_f, state=state)
-    ]
-    return allowed_moves_optimized
-
-
-def _get_castle_possibilities(board, color, castling_rights, optimizer) -> List[int]:
-    """Get castle possibilities."""
+def _get_castle_king_moves(board, castling_rights, optimizer) -> List[int]:
+    """Get allowed castling moves from king."""
     allowed_castle_moves = []
 
-    castling_rights_per_color = [
-        cast for cast in castling_rights if cast in ChessUtils.CASTLING_PER_COLOR[color]
-    ]
-    for castle_type in castling_rights_per_color:
+    for castle_type in castling_rights:
         square_indexes = ChessUtils.CASTLING_UTILS[castle_type]["square_indexes"]
         squares_layout = ChessUtils.CASTLING_UTILS[castle_type]["squares_layout"]
         positions = ChessUtils.CASTLING_UTILS[castle_type][
@@ -650,11 +625,23 @@ def _get_castle_possibilities(board, color, castling_rights, optimizer) -> List[
             [
                 board[index] == squares_layout[i]
                 for i, index in enumerate(square_indexes)
-            ]  # board[square_indexes] == squares_layout
+            ]
         ) and not _check_if_positions_are_attacked(optimizer.attacked_map, positions):
-            allowed_castle_moves.append(castle_type)
+            allowed_castle_moves.append(ChessUtils.CASTLING_POS[castle_type][1])
 
     return allowed_castle_moves
+
+
+def _get_check_illegal_moves(
+    state: State, pos: int, allowed_moves: list, optimizer: Optimizer
+) -> List[int]:
+    # the whole point is to avoid another depth
+    allowed_moves_optimized = [
+        pos_f
+        for pos_f in allowed_moves
+        if optimizer._is_move_legal(pos_i=pos, pos_f=pos_f, state=state)
+    ]
+    return allowed_moves_optimized
 
 
 def _get_blocked_illegal_moves(
@@ -664,42 +651,51 @@ def _get_blocked_illegal_moves(
     get_blocked_illegal_moves = []
     for move in allowed_moves:
         index_trajectory = _get_index_trajectory(pos_i=pos, pos_f=move)
-        if (
-            sum([abs(board[pos]) for pos in index_trajectory]) > 0
-        ):  # abs(board[index_trajectory]).sum() > 0:
+        if sum([abs(board[pos]) for pos in index_trajectory]) > 0:
             get_blocked_illegal_moves.append(move)
     return get_blocked_illegal_moves
 
 
-def _get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed):
-    # TODO: it feels duplicated
-    rank = pos // 8
-    allowed_push_moves_offset = [8, 16, -8, -16] if rank in [1, 6] else [8, -8]
-    # TODO: definetely duplicated
-    subset_of_en_passant_allowed = (
-        list(range(16, 24)) if color == -1 else list(range(40, 48))
+def _get_pawn_moves(board, pos, allowed_moves, color, en_passant_allowed) -> List[int]:
+    # There can be only four max (white or black)
+    # 0 X 0    0 i 0
+    # X X X or X X X
+    # 0 i 0    0 X 0
+    rank_allowed_double = 1 if color == 1 else 6
+    diag_moves = [pos + 7 * color, pos + 9 * color]
+    regular_push_move = pos + 8 * color
+    # check out of limit
+    regular_push_move = (
+        regular_push_move if regular_push_move > 0 and regular_push_move < 64 else []
     )
-    en_passant_allowed_per_color = [
-        move for move in en_passant_allowed if move in subset_of_en_passant_allowed
-    ]
+    double_push_move = pos + 16 * color
+    # check out of limit
+    double_push_move = (
+        double_push_move if double_push_move > 0 and double_push_move < 64 else []
+    )
 
-    diagonal_moves = [
-        pos + diagonal_index
-        for diagonal_index in [7, 9, -7, -9]
-        if (pos + diagonal_index) in allowed_moves
-    ]
-    allowed_diagonal_moves = [
+    # actually allowed
+    allowed_diag_moves = [
         move
-        for move in diagonal_moves
-        if ((board[move] * color < 0) or (move in en_passant_allowed_per_color))
+        for move in diag_moves
+        if move in allowed_moves
+        and (move in en_passant_allowed or board[move] * color < 0)
     ]
-    push_moves = [
-        pos + push_index
-        for push_index in allowed_push_moves_offset
-        if (pos + push_index) in allowed_moves
-    ]
-    allowed_push_moves = [move for move in push_moves if board[move] == 0]
-    return allowed_diagonal_moves + allowed_push_moves
+    allowed_regular_push_move = (
+        [regular_push_move]
+        if (regular_push_move in allowed_moves and board[regular_push_move] == 0)
+        else []
+    )
+    allowed_double_push_move = (
+        [double_push_move]
+        if (
+            double_push_move in allowed_moves
+            and board[double_push_move] == 0
+            and pos // 8 == rank_allowed_double
+        )
+        else []
+    )
+    return allowed_diag_moves + allowed_regular_push_move + allowed_double_push_move
 
 
 def _get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
@@ -720,7 +716,7 @@ def _get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
             return list(range(pos_i, pos_f, 9 if pos_i < pos_f else -7))[1:]
 
 
-def _get_allowed_moves_in_state(state, optimizer=None):
+def _get_allowed_moves_in_state(state: State, optimizer=None):
     pieces_positions = [
         pos for pos, piece in enumerate(state.board) if piece * state.turn > 0
     ]
