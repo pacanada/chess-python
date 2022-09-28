@@ -36,6 +36,11 @@ DICT_POSITIONS = {
         "depth": 4,
         "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     },
+    6: {
+        "name": "puzzle",
+        "depth": 3,
+        "fen": "3qr2k/pbpp2pp/1p5N/3Q2b1/2P1P3/P7/1PP2PPP/R4RK1 w - - 0 1"
+    }
 }
 
 

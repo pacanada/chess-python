@@ -1,6 +1,6 @@
 import pytest
 
-from chess_python.chess import get_index_trajectory
+from chess_python.chess import _get_index_trajectory
 
 
 @pytest.fixture
@@ -18,6 +18,6 @@ def test_indexes(diagonal_cases):
         pos_i = v["pos_i"]
         pos_f = v["pos_f"]
         expected = v["trajectory"]
-        assert set(get_index_trajectory(pos_i, pos_f)) == set(
+        assert set(_get_index_trajectory(pos_i, pos_f)) == set(
             expected
         ), f"Failed for pos_i {pos_i}, pos_f {pos_f}"
