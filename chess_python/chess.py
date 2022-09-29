@@ -434,7 +434,7 @@ class Chess:
 
         print("Allowed moves\n" + repr_str)
 
-    def move(self, move: str, check_allowed_moves: bool = False):
+    def move(self, move: str, check_allowed_moves: bool = False, update_optimizer: bool = True):
 
         pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
         piece = self.state.board[pos_i]
@@ -481,7 +481,8 @@ class Chess:
         # 3. castling allowed
         self._update_castling_rights(piece, piece_color, pos_i)
         # 5. and so on
-        if self.optimizer is not None:
+        if update_optimizer:
+            # avoid time consuming for last node (for engines purposes)
             self.optimizer._update(self.state)
         # Bonus, keeping track of move combinations for debugging
         self.move_combination.append(move)
