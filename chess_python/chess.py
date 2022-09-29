@@ -102,11 +102,11 @@ class ChessUtils:
 
 
 class State:
-    def __init__(self, fen_string: Optional[str], initialize=True):
+    def __init__(self, fen: Optional[str], initialize=True):
         """Class to keep track of the state of the game."""
         # TODO: castling and on passant can be encoded in a smarter way
         if initialize:
-            self.fen_string = fen_string
+            self.fen = fen
             (
                 board,
                 turn,
@@ -114,7 +114,7 @@ class State:
                 en_passant_squares,
                 half_move_clock,
                 full_move_number,
-            ) = parse_fen(fen_string, ChessUtils.PIECE_DICT)
+            ) = parse_fen(fen, ChessUtils.PIECE_DICT)
             self.board: List[int] = list(board)
             self.turn: int = turn
             self.castling_rights: List[int] = (
@@ -134,7 +134,7 @@ class State:
             self.full_move_number: int = full_move_number
         else:
             # avoid initialization when copying
-            self.fen_string = None
+            self.fen = None
             self.board = []
             self.turn = 0
             self.castling_rights = []
@@ -143,7 +143,7 @@ class State:
             self.full_move_number = 0
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
-        state = type(self)(None, False)
+        state = type(self)(fen=None, initialize=False)
         state.board = self.board.copy()
         state.turn = self.turn
         state.castling_rights = deepcopy(self.castling_rights)
@@ -151,6 +151,9 @@ class State:
         state.half_move_clock = self.half_move_clock
         state.full_move_number = self.full_move_number
         return state
+    def __hash__(self):
+        return hash(tuple(self.board)+ (self.turn,))
+
 
 
 class Optimizer:
@@ -355,13 +358,14 @@ def _get_direct_attacks(pos: int, piece: int, state: State) -> List[int]:
 
 class Chess:
     def __init__(self, fen: Optional[str] = None, run_optimizer=True, initialize=True):
-        self.state = State(fen_string=fen) if initialize else ""
+        self.state = State(fen=fen) if initialize else ""
         self.optimizer = Optimizer(self.state) if run_optimizer and initialize else None
         self.move_combination: List[str] = []
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
-        chess = type(self)(None, False, False)
+        # we do this to create the objects in memory but with the minimum overhead
+        chess = type(self)(fen=None, run_optimizer=False, initialize=False)
         chess.state = deepcopy(self.state)
         chess.optimizer = self.optimizer
         chess.move_combination = self.move_combination
