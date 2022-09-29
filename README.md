@@ -105,3 +105,4 @@ positions, reference time 0.05 s with
 - [x] Explore deepcopy for tree generation, it takes a lot of time (only copying board improves
       performance)
 - [ ] Simplify castling
+- [ ] it is parsin fen all the time

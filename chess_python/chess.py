@@ -65,22 +65,6 @@ class ChessUtils:
         "K": 6,
     }
     PIECE_DICT_INV = {v: k for k, v in PIECE_DICT.items()}
-    # use nice icons
-    PIECE_DICT_INV_UNI = {
-        0: " ",
-        1: "♙",
-        2: "♘",
-        3: "♗",
-        4: "♖",
-        5: "♕",
-        6: "♔",
-        -1: "♟",
-        -2: "♞",
-        -3: "♝",
-        -4: "♜",
-        -5: "♛",
-        -6: "♚",
-    }
     # {"a1": 0, "a2": 8,..., "b1": 1, "b2": 9, ..., "h8": 63}
     POSITION_DICT = {
         file + str(rank + 1): pos + rank * 8
@@ -118,38 +102,48 @@ class ChessUtils:
 
 
 class State:
-    def __init__(self, fen_string: Optional[str]):
+    def __init__(self, fen_string: Optional[str], initialize=True):
         """Class to keep track of the state of the game."""
         # TODO: castling and on passant can be encoded in a smarter way
-        self.fen_string = fen_string
-        (
-            board,
-            turn,
-            castling_rights,
-            en_passant_squares,
-            half_move_clock,
-            full_move_number,
-        ) = parse_fen(fen_string, ChessUtils.PIECE_DICT)
-        self.board: List[int] = list(board)
-        self.turn: int = turn
-        self.castling_rights: List[int] = (
-            [ChessUtils.CASTLING_ENCODING[cast] for cast in castling_rights]
-            if castling_rights != "-"
-            else []
-        )
-        self.en_passant_allowed: list = (
-            [
-                ChessUtils.POSITION_DICT[en_passant_squares[i : i + 2]]
-                for i in range(0, len(en_passant_squares), 2)
-            ]
-            if en_passant_squares != "-"
-            else []
-        )
-        self.half_move_clock: int = half_move_clock
-        self.full_move_number: int = full_move_number
+        if initialize:
+            self.fen_string = fen_string
+            (
+                board,
+                turn,
+                castling_rights,
+                en_passant_squares,
+                half_move_clock,
+                full_move_number,
+            ) = parse_fen(fen_string, ChessUtils.PIECE_DICT)
+            self.board: List[int] = list(board)
+            self.turn: int = turn
+            self.castling_rights: List[int] = (
+                [ChessUtils.CASTLING_ENCODING[cast] for cast in castling_rights]
+                if castling_rights != "-"
+                else []
+            )
+            self.en_passant_allowed: list = (
+                [
+                    ChessUtils.POSITION_DICT[en_passant_squares[i : i + 2]]
+                    for i in range(0, len(en_passant_squares), 2)
+                ]
+                if en_passant_squares != "-"
+                else []
+            )
+            self.half_move_clock: int = half_move_clock
+            self.full_move_number: int = full_move_number
+        else:
+            # avoid initialization when copying
+            self.fen_string = None
+            self.board = []
+            self.turn = 0
+            self.castling_rights = []
+            self.en_passant_allowed = []
+            self.half_move_clock = 0
+            self.full_move_number = 0
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
-        state = type(self)(None)
+        state = type(self)(None, False)
         state.board = self.board.copy()
         state.turn = self.turn
         state.castling_rights = deepcopy(self.castling_rights)
@@ -360,14 +354,14 @@ def _get_direct_attacks(pos: int, piece: int, state: State) -> List[int]:
 
 
 class Chess:
-    def __init__(self, fen: Optional[str] = None, run_optimizer=True):
-        self.state = State(fen_string=fen)
-        self.optimizer = Optimizer(self.state) if run_optimizer else None
+    def __init__(self, fen: Optional[str] = None, run_optimizer=True, initialize=True):
+        self.state = State(fen_string=fen) if initialize else ""
+        self.optimizer = Optimizer(self.state) if run_optimizer and initialize else None
         self.move_combination: List[str] = []
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
-        chess = type(self)(None, False)
+        chess = type(self)(None, False, False)
         chess.state = deepcopy(self.state)
         chess.optimizer = self.optimizer
         chess.move_combination = self.move_combination
