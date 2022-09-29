@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "chess-python-pip"
-version = "0.1.4"
+version = "0.1.5"
 description = "Python implementation of the game of chess."
 authors = ["pacanada <pereirapcanada@gmail.com>"]
 readme = "README.md"
