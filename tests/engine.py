@@ -51,7 +51,7 @@ def test_engine():
         chess = Chess(fen)
         agent = Agent(color=chess.state.turn)
         t0 = time.time()
-        recommended_moves = agent.recommend(chess, 5, True)
+        recommended_moves = agent.recommend(chess, 3, True)
         t1 = time.time()
         print(k)
         print(recommended_moves, recommended_moves[0][1], t1 - t0)

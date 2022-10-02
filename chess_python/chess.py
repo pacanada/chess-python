@@ -190,12 +190,11 @@ class Optimizer:
         pin_positions = []
         # only the ones that can attack in diagonal or direct more than one square
         king_pos = state.board.index(state.turn * 6)
-        king_pos = state.board.index(state.turn * 6)
 
         enemies_can_pin = [
             pos
             for pos in self.enemy_positions
-            if state.board[pos]*state.turn <= -3 and state.board[pos]*state.turn >= -5
+            if state.board[pos] * state.turn <= -3 and state.board[pos] * state.turn >= -5
         ]
         for pos in enemies_can_pin:
             if king_pos in _get_allowed_moves_by_piece(
@@ -349,7 +348,7 @@ def _get_direct_attacks(pos: int, piece: int, state: State) -> List[int]:
 
 class Chess:
     def __init__(self, fen: Optional[str] = None, run_optimizer=True, initialize=True):
-        self.state = State(fen=fen) if initialize else ""
+        self.state = State(fen=fen) if initialize else State(fen="", initialize=False)
         self.optimizer = Optimizer(self.state) if run_optimizer and initialize else None
         self.move_combination: List[str] = []
 
