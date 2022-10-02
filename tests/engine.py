@@ -1,14 +1,25 @@
-from copy import deepcopy
 import time
+
 from agent import Agent
 from chess_python.chess import Chess
 
-
-DICT_TEST ={
-0: {"fen": "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0", "bm": "d6d1"},
-1: {"fen": "3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - 0 0", "bm": "d4d5"},
-2: {"fen": "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - 0 0", "bm": "f6f5"}, # this one chess.com does not agree
-3: {"fen": "rnbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R w KQkq - 0 0", "bm": "e5e6"},
+DICT_TEST = {
+    0: {
+        "fen": "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0",
+        "bm": "d6d1",
+    },
+    1: {
+        "fen": "3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - 0 0",
+        "bm": "d4d5",
+    },
+    2: {
+        "fen": "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - 0 0",
+        "bm": "f6f5",
+    },  # this one chess.com does not agree
+    3: {
+        "fen": "rnbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R w KQkq - 0 0",
+        "bm": "e5e6",
+    },
 }
 
 # "r1b2rk1/2q1b1pp/p2ppn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1 w - -" bm Nd5 a4; id "BK.05";
@@ -32,16 +43,18 @@ DICT_TEST ={
 # "r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1 b kq -" bm f6; id "BK.23";
 # "r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w - -" bm f4; id "BK.24";
 def test_engine():
-    for k,v in DICT_TEST.items():
+    for k, v in DICT_TEST.items():
         fen = v["fen"]
         bm = v["bm"]
         chess = Chess(fen)
         agent = Agent(color=chess.state.turn)
         t0 = time.time()
-        recommended_moves = agent.recommend(chess,5, True)
+        recommended_moves = agent.recommend(chess, 5, True)
         t1 = time.time()
         print(k)
-        print(recommended_moves, recommended_moves[0][1], t1-t0)
+        print(recommended_moves, recommended_moves[0][1], t1 - t0)
         print(bm)
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
     test_engine()

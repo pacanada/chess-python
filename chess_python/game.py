@@ -3,9 +3,7 @@ from chess_python.chess import Chess, ChessUtils
 
 def main():
     while True:
-        inp = input(
-            "1. Start game. 2. Show allowed moves. 3 Move. 4. Show board. 5. Exit."
-        )
+        inp = input("1. Start game. 2. Show allowed moves. 3 Move. 4. Show board. 5. Exit.")
         if inp == "1":
             print("Starting game")
             fen = input("Enter fen: ")
@@ -22,7 +20,8 @@ def main():
                 print(
                     "Allowed moves: ",
                     game.print_allowed_moves(
-                        allowed_moves=allowed_moves, pos=ChessUtils.POSITION_DICT[pos]
+                        allowed_moves=allowed_moves,
+                        pos=ChessUtils.POSITION_DICT[pos],
                     ),
                 )
         elif inp == "3":
