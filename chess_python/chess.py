@@ -153,7 +153,7 @@ class State:
         return state
 
     def __hash__(self):
-        return hash(tuple(self.board) + (self.turn,))
+        return hash(tuple(self.board) + (self.turn,)+ tuple(self.castling_rights)+tuple(self.en_passant_allowed,))
 
 
 class Optimizer:
@@ -427,7 +427,7 @@ class Chess:
         move: str,
         check_allowed_moves: bool = False,
         update_optimizer: bool = True,
-    ):
+    ):  
 
         pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
         piece = self.state.board[pos_i]

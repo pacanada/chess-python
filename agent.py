@@ -1,6 +1,6 @@
 import time
 from copy import deepcopy
-from typing import List, Literal, Tuple
+from typing import Dict, List, Literal, Tuple
 
 from chess_python.chess import Chess, ChessUtils
 
@@ -54,78 +54,107 @@ class MoveOrderer:
         return moves_ordered
 
 
-# CACHE = {}
-def minimax_ab(node: Chess, depth, alpha, beta, maximize):
-    """Working"""
-    # if node.state in CACHE.keys():
-    #     return CACHE[node.state]
-
-    if depth == 0:
-        return ClassicEvaluator().evaluate(node.state)
-
-    legal_moves = MoveOrderer().order(board=node.state.board, moves=node.legal_moves())
-
-    if maximize:
-        value = -float("inf")
-        for move in legal_moves:
-            # no need to update the optimizer if is second to last node
-            child = deepcopy(node).move(move, False, True if depth != 1 else False)
-            value = max(value, minimax_ab(child, depth - 1, alpha, beta, False))
-            if value >= beta:
-                break
-            alpha = max(alpha, value)
-        return value
-    else:
-        value = +float("inf")
-        for move in legal_moves:
-            child = deepcopy(node).move(move, False, True if depth != 1 else False)
-            value = min(value, minimax_ab(child, depth - 1, alpha, beta, True))
-            if value <= alpha:
-                break
-            beta = min(beta, value)
-    # CACHE[node.state] = value
-    return value
-
-
-def minimax(node: Chess, depth, maximize):
-    if depth == 0:
-        return ClassicEvaluator().evaluate(node.state)
-    if maximize:
-        maxeva = -float("inf")
-        for move in node.legal_moves():
-            child = deepcopy(node).move(move)
-            eva = minimax(child, depth - 1, False)
-            maxeva = max(eva, maxeva)
-        return maxeva
-    else:
-        mineva = +float("inf")
-        for move in node.legal_moves():
-            child = deepcopy(node).move(move)
-            eva = minimax(child, depth - 1, True)
-            mineva = min(eva, mineva)
-
-        return mineva
-
-
 class Agent:
     """Base class to make a recommendation of best move"""
 
-    def __init__(self, color: Literal[1, -1]):
+    def __init__(self, depth: int, color: Literal[1, -1], alpha_beta:bool = True, move_ordering:bool=True, use_transpositions:bool=False):
         self.color = color
+        self.nodes_visited = 0
+        self.alpha_beta = alpha_beta
+        self.move_ordering = move_ordering 
+        self.use_transpositions = use_transpositions
+        self.depth = depth
+        self.transpositions: Dict[int, Dict[int, float]]  = {i:{} for i in range(depth+1)}
+        self.transpositions_found=0
+        
 
-    def recommend(self, node: Chess, depth: int, order: bool = False):
+    def minimax(self, node: Chess, depth, maximize):
+        if depth == 0:
+            self.nodes_visited+=1
+            return ClassicEvaluator().evaluate(node.state)
+        if maximize:
+            maxeva = -float("inf")
+            for move in node.legal_moves():
+                child = deepcopy(node).move(move)
+                eva = self.minimax(child, depth - 1, False)
+                maxeva = max(eva, maxeva)
+            return maxeva
+        else:
+            mineva = +float("inf")
+            for move in node.legal_moves():
+                child = deepcopy(node).move(move)
+                eva = self.minimax(child, depth - 1, True)
+                mineva = min(eva, mineva)
+
+            return mineva
+
+    def minimax_ab(self, node: Chess, depth, alpha, beta, maximize):
+        """Working. As class method to keep track of metrics"""
+        if self.use_transpositions:
+            node_hash = hash(node.state)
+            if node_hash in self.transpositions[depth].keys():
+                self.transpositions_found +=1
+                return self.transpositions[depth][node_hash]
+
+        if depth == 0:
+            self.nodes_visited+=1
+            value = ClassicEvaluator().evaluate(node.state)
+            if self.use_transpositions:
+                # not working properly: is the hash dimension not enough?
+                self.transpositions[0][hash(node.state)]=value
+            return value
+
+        if self.move_ordering:
+            legal_moves = MoveOrderer().order(board=node.state.board, moves=node.legal_moves())
+        else:
+            legal_moves = node.legal_moves()
+
+        if maximize:
+            value = -float("inf")
+            node_hash = hash(hash(node.state))
+            for move in legal_moves:
+
+                # no need to update the optimizer if is second to last node
+                child = deepcopy(node).move(move, False, True if depth != 1 else False)
+                value = max(value, self.minimax_ab(child, depth - 1, alpha, beta, False))
+                if value >= beta:
+                    break
+                alpha = max(alpha, value)
+
+        else:
+            value = +float("inf")
+            node_hash = hash(hash(node.state))
+            for move in legal_moves:
+                child = deepcopy(node).move(move, False, True if depth != 1 else False)
+                value = min(value, self.minimax_ab(child, depth - 1, alpha, beta, True))
+                if value <= alpha:
+                    break
+                beta = min(beta, value)
+        # caching
+        if self.use_transpositions:
+            self.transpositions[depth][node_hash]=value
+        return value
+
+    def recommend(self, node: Chess, order: bool = False):
         list_moves: List[Tuple[str, float, str]] = []
+        if self.move_ordering:
+            legal_moves = MoveOrderer().order(board=node.state.board, moves=node.legal_moves())
+        else:
+            legal_moves = node.legal_moves()
         maximize = self.color == -1
-        for move in node.legal_moves():
+        for move in legal_moves:
             ti = time.time()
-            # value = minimax(node=deepcopy(node).move(move), depth=depth, maximize=maximize)
-            value = minimax_ab(
-                node=deepcopy(node).move(move),
-                depth=depth,
-                alpha=-float("inf"),
-                beta=float("inf"),
-                maximize=maximize,
-            )
+            if self.alpha_beta:
+            
+                value = self.minimax_ab(
+                    node=deepcopy(node).move(move),
+                    depth=self.depth,
+                    alpha=-float("inf"),
+                    beta=float("inf"),
+                    maximize=maximize,
+                )
+            else:
+                value = self.minimax(node=deepcopy(node).move(move), depth=self.depth, maximize=maximize)
             tf = time.time()
             list_moves.append((move, value, f"{(tf-ti):.2f}"))
         if order:
