@@ -63,6 +63,25 @@ def minimax_ab(node:Chess, depth, alpha, beta, maximize):
     # CACHE[node.state] = value
     return value
 
+def minimax(node: Chess, depth, maximize):
+    if depth == 0:
+        return ClassicEvaluator().evaluate(node.state)
+    if maximize:
+        maxeva=-float("inf")
+        for move in node.legal_moves():
+            child = deepcopy(node).move(move)
+            eva = minimax(child, depth-1, False)
+            maxeva = max(eva, maxeva)
+        return maxeva
+    else:
+        mineva=+float("inf")
+        for move in node.legal_moves():
+            child = deepcopy(node).move(move)
+            eva = minimax(child, depth-1, True)
+            mineva = min(eva, mineva)
+
+        return mineva
+
 class Agent:
     """Base class to make a recommendation of best move"""
     def __init__(self, color: Literal[1,-1]):
@@ -73,6 +92,7 @@ class Agent:
         maximize = self.color == -1
         for move in node.legal_moves():
             ti = time.time()
+            #value = minimax(node=deepcopy(node).move(move), depth=depth, maximize=maximize)
             value = minimax_ab(node=deepcopy(node).move(move), depth=depth, alpha=-float("inf"), beta=float("inf"), maximize=maximize)
             tf = time.time()
             list_moves.append((move, value, f"{(tf-ti):.2f}"))

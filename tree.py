@@ -6,11 +6,11 @@ from typing import Optional
 from chess_python.chess import Chess
 
 DICT_POSITIONS = {
-    # 0: {
-    #     "name": "init_position",
-    #     "depth": 3,
-    #     "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    # },
+    0: {
+        "name": "init_position",
+        "depth": 3,
+        "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    },
     # 1: {
     #     "name": "pos_3",
     #     "depth": 3,

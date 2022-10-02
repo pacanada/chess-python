@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
+import numba
 
 from chess_python.utils import parse_fen
 
@@ -160,6 +161,12 @@ class Optimizer:
     """In this class we keep track of positions attacked by enemy, and pin pieces"""
 
     def __init__(self, state: State):
+        self.enemy_positions: List[int] = [
+            pos for pos, piece in enumerate(state.board) if piece * state.turn < 0
+        ]
+        self.friendly_positions: List[int] = [
+            pos for pos, piece in enumerate(state.board) if piece * state.turn > 0
+        ]
         self.attacked_map_dict: Dict[int, List[int]] = {}  # convenient function
         self.pin_map_dict: Dict[int, Tuple[int, List[int]]] = {}
         self.pin_map = self._update_pin_map(state)
@@ -169,6 +176,12 @@ class Optimizer:
         )
 
     def _update(self, state: State):
+        self.enemy_positions = [
+            pos for pos, piece in enumerate(state.board) if piece * state.turn < 0
+        ]
+        self.friendly_positions: List[int] = [
+            pos for pos, piece in enumerate(state.board) if piece * state.turn > 0
+        ]
         self.pin_map = self._update_pin_map(state)
         self.attacked_map = self._update_attacked_map(state)
         self.positions_atacking_king = self._get_positions_of_attacking_pieces(
@@ -179,12 +192,12 @@ class Optimizer:
         pin_positions = []
         # only the ones that can attack in diagonal or direct more than one square
         king_pos = state.board.index(state.turn * 6)
-        enemy_positions = [
+        enemy_positions_could_pin = [
             pos
-            for pos, piece in enumerate(state.board)
-            if piece * state.turn <= -3 and piece * state.turn >= -5
+            for pos in self.enemy_positions
+            if state.board[pos] <= -3 and state.board[pos] >= -5
         ]
-        for pos in enemy_positions:
+        for pos in enemy_positions_could_pin:
             if king_pos in _get_allowed_moves_by_piece(
                 pos, ChessUtils.MOVE_DIRECTIONS_OFFSET[state.board[pos]]
             ):
@@ -237,10 +250,7 @@ class Optimizer:
         self.attacked_map_dict = {}
 
         attacked_map: List[int] = []
-        enemy_positions = [
-            pos for pos, piece in enumerate(state.board) if piece * state.turn < 0
-        ]
-        for pos in enemy_positions:
+        for pos in self.enemy_positions:
             piece = state.board[pos]
             direct_attacks = _get_direct_attacks(pos, piece, state)
             self.attacked_map_dict[pos] = direct_attacks
@@ -550,7 +560,6 @@ class Chess:
                 f"Invalid movement, piece: {ChessUtils.PIECE_DICT_INV[self.state.board[pos_i]]} cannot move to that position. Allowed moves: {allowed_moves,[ChessUtils.POSITION_DICT_INV[pos] for pos in allowed_moves]}"
             )
 
-
 def _get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     """Get allowed moves based only on piece related moves."""
     # TODO: should probably optimize this, since it is called many times
@@ -720,11 +729,8 @@ def _get_index_trajectory(pos_i: int, pos_f: int) -> List[int]:
 
 
 def _get_allowed_moves_in_state(state: State, optimizer: Optimizer) -> List[str]:
-    pieces_positions = [
-        pos for pos, piece in enumerate(state.board) if piece * state.turn > 0
-    ]
     allowed_complete_moves = []
-    for pos_i in pieces_positions:
+    for pos_i in optimizer.friendly_positions:
         allowed_moves = _get_allowed_moves(
             board=state.board,
             pos=pos_i,

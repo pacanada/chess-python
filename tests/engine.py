@@ -36,10 +36,9 @@ def test_engine():
         fen = v["fen"]
         bm = v["bm"]
         chess = Chess(fen)
-        print(chess.state.turn)
-        agent = Agent(color=deepcopy(chess.state.turn))
+        agent = Agent(color=chess.state.turn)
         t0 = time.time()
-        recommended_moves = agent.recommend(chess, 5, True)
+        recommended_moves = agent.recommend(chess,5, True)
         t1 = time.time()
         print(k)
         print(recommended_moves, recommended_moves[0][1], t1-t0)

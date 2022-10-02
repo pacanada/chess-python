@@ -96,7 +96,9 @@ positions, reference time 0.05 s with
 
 - [x] Include tests for perft in different positions
 - [x] Include utils if there is a mismatch in positions tree with reference implementation
-- [ ] Improve performance
+- [ ] Improve performance:
+  - Keep track of index where there are pieces in optimizer level
+  - Move and unmake move
 - [ ] Improve overall code quality (clarity, choose right data structure for the job):
   - Public vs private functions
   - cyclomatic complexity in `is_legal_move`
@@ -105,4 +107,3 @@ positions, reference time 0.05 s with
 - [x] Explore deepcopy for tree generation, it takes a lot of time (only copying board improves
       performance)
 - [ ] Simplify castling
-- [ ] it is parsin fen all the time
