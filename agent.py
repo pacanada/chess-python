@@ -40,7 +40,7 @@ class ClassicEvaluator:
 class MoveOrderer:
     """Priority for captures"""
 
-    def order(self, board, moves: List[str]):
+    def order(self, board: List[int], moves: List[str]):
         def rank(move: str):
             # way more things can be done here
             v_end = PIECE_VALUES_ABS[abs(board[ChessUtils.POSITION_DICT[move[2:4]]])]
@@ -63,7 +63,7 @@ def minimax_ab(node: Chess, depth, alpha, beta, maximize):
     if depth == 0:
         return ClassicEvaluator().evaluate(node.state)
 
-    legal_moves = MoveOrderer().order(node.state.board, node.legal_moves())
+    legal_moves = MoveOrderer().order(board=node.state.board, moves=node.legal_moves())
 
     if maximize:
         value = -float("inf")
@@ -114,7 +114,7 @@ class Agent:
         self.color = color
 
     def recommend(self, node: Chess, depth: int, order: bool = False):
-        list_moves: List[Tuple[str, float]] = []
+        list_moves: List[Tuple[str, float, str]] = []
         maximize = self.color == -1
         for move in node.legal_moves():
             ti = time.time()

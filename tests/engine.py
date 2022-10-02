@@ -42,6 +42,8 @@ DICT_TEST = {
 # "2r2rk1/1bqnbpp1/1p1ppn1p/pP6/N1P1P3/P2B1N1P/1B2QPP1/R2R2K1 b - -" bm Bxe4; id "BK.22";
 # "r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1 b kq -" bm f6; id "BK.23";
 # "r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w - -" bm f4; id "BK.24";
+
+
 def test_engine():
     for k, v in DICT_TEST.items():
         fen = v["fen"]

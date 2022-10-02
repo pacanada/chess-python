@@ -190,10 +190,14 @@ class Optimizer:
         pin_positions = []
         # only the ones that can attack in diagonal or direct more than one square
         king_pos = state.board.index(state.turn * 6)
-        enemy_positions_could_pin = [
-            pos for pos in self.enemy_positions if state.board[pos] <= -3 and state.board[pos] >= -5
+        king_pos = state.board.index(state.turn * 6)
+
+        enemies_can_pin = [
+            pos
+            for pos in self.enemy_positions
+            if state.board[pos]*state.turn <= -3 and state.board[pos]*state.turn >= -5
         ]
-        for pos in enemy_positions_could_pin:
+        for pos in enemies_can_pin:
             if king_pos in _get_allowed_moves_by_piece(
                 pos, ChessUtils.MOVE_DIRECTIONS_OFFSET[state.board[pos]]
             ):
