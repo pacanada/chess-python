@@ -1,6 +1,8 @@
 # Introduction
 
-Python implementation of chess game in less than 1000 lines of code.
+Python **implementation of the chess game** in less than 1000 lines of code.
+
+For engines/agents to play against check my other project [chess-ai](https://github.com/pacanada/chess-ai)
 
 There is also a work in progress for the cli based game (`python -m chess_python.game`).
 
