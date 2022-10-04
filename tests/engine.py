@@ -57,13 +57,14 @@ def test_engine():
             color=chess.state.turn,
             alpha_beta=True,
             move_ordering=True,
-            use_transpositions=False,
+            use_transpositions=True,
         )
         t0 = time.time()
         recommended_moves = agent.recommend(chess, True)
         t1 = time.time()
         print(
-            f"{agent.depth=}, {k=}, {agent.alpha_beta=} {agent.move_ordering=}, Time: {(t1-t0):.2f}. Nodes visited: {agent.nodes_visited}. Transpositions found {agent.transpositions_found}"
+            f"{agent.depth=}, {k=}, {agent.alpha_beta=} {agent.move_ordering=}, Time: {(t1-t0):.2f}"
+            f"Nodes visited: {agent.nodes_visited}. Transpositions found {agent.transpositions_found}"
         )
         print(recommended_moves[:])
         print(bm)

@@ -100,6 +100,7 @@ class Agent:
 
     def minimax_ab(self, node: Chess, depth, alpha, beta, maximize):
         """Working. As class method to keep track of metrics"""
+
         node_hash = hash(node.state)
         if self.use_transpositions:
             if node_hash in self.transpositions[depth].keys():
@@ -109,8 +110,8 @@ class Agent:
             self.nodes_visited += 1
             value = ClassicEvaluator().evaluate(node.state)
             if self.use_transpositions:
-                # having the value cached for the leaf nodes does not help much since the evaluator
-                # is not very expensive
+                    # having the value cached for the leaf nodes does not help much since the evaluator
+                    # is not very expensive
                 self.transpositions[0][node_hash] = value
             return value
 
@@ -133,6 +134,9 @@ class Agent:
                 if value >= beta:
                     break
                 alpha = max(alpha, value)
+            # caching on in beta cutoff
+            if self.use_transpositions:
+                self.transpositions[depth][node_hash] = value
 
         else:
             value = +float("inf")
@@ -142,9 +146,7 @@ class Agent:
                 if value <= alpha:
                     break
                 beta = min(beta, value)
-        # caching
-        if self.use_transpositions:
-            self.transpositions[depth][node_hash] = value
+
         return value
 
     def recommend(self, node: Chess, order: bool = False):
