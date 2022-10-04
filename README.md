@@ -97,8 +97,9 @@ positions, reference time 0.05 s with
 - [x] Include tests for perft in different positions
 - [x] Include utils if there is a mismatch in positions tree with reference implementation
 - [ ] Improve performance:
-  - Keep track of index where there are pieces in optimizer level
-  - Move and unmake move
+  - [x] Keep track of index where there are pieces in optimizer level
+  - [ ] Move and unmake move (implenting unmake also requires using a copy of the board, which
+        performance wise does not improve anything)
 - [ ] Improve overall code quality (clarity, choose right data structure for the job):
   - Public vs private functions
   - cyclomatic complexity in `is_legal_move`

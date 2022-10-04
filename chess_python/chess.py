@@ -153,7 +153,14 @@ class State:
         return state
 
     def __hash__(self):
-        return hash(tuple(self.board) + (self.turn,)+ tuple(self.castling_rights)+tuple(self.en_passant_allowed,))
+        return hash(
+            tuple(self.board)
+            + (self.turn,)
+            + tuple(self.castling_rights)
+            + tuple(
+                self.en_passant_allowed,
+            )
+        )
 
 
 class Optimizer:
@@ -351,6 +358,9 @@ class Chess:
         self.state = State(fen=fen) if initialize else State(fen="", initialize=False)
         self.optimizer = Optimizer(self.state) if run_optimizer and initialize else None
         self.move_combination: List[str] = []
+        self.result = None
+        self.is_checkmate = False
+        self.is_stalemate = False
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
@@ -359,6 +369,9 @@ class Chess:
         chess.state = deepcopy(self.state)
         chess.optimizer = self.optimizer
         chess.move_combination = self.move_combination
+        chess.result = self.result
+        chess.is_checkmate = self.is_checkmate
+        chess.is_stalemate = self.is_stalemate
         return chess
 
     def __repr__(self):
@@ -374,7 +387,17 @@ class Chess:
         )
 
     def legal_moves(self):
-        return _get_allowed_moves_in_state(self.state, self.optimizer)
+        allowed_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
+        # handle end of game
+        if len(allowed_moves) == 0:
+            king_pos = self.state.board.index(self.state.turn * 6)
+            if king_pos in self.optimizer.attacked_map:
+                self.is_checkmate = True
+                self.result = 1 if self.state.turn == -1 else -1
+            else:
+                self.is_stalemate = True
+                self.result = 0
+        return allowed_moves
 
     def fen(self):
         return "not implemented"
@@ -427,7 +450,7 @@ class Chess:
         move: str,
         check_allowed_moves: bool = False,
         update_optimizer: bool = True,
-    ):  
+    ):
 
         pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
         piece = self.state.board[pos_i]
@@ -539,18 +562,20 @@ def _get_allowed_moves_by_piece(pos: int, offsets: List[List[int]]):
     # TODO: should probably optimize this, since it is called many times
 
     # we have to take into account limits of the board in the side, which complicates things if we use a 1D array for the board
-    pos_2d = (pos // 8, pos % 8)
+    pos_2d_x, pos_2d_y = pos // 8, pos % 8
     list_allowed: List[int] = []
 
-    for offset in offsets:
-        allowed_x = pos_2d[0] + offset[0]
-        allowed_y = pos_2d[1] + offset[1]
-        if (allowed_x < 0 or allowed_y < 0) or (allowed_x > 7 or allowed_y > 7):
-            # out of bounds
-            continue
-        # transform to 1d
-        list_allowed.append(allowed_x * 8 + allowed_y)
+    # Other approaches but it does not seems faster. TODO: revisit
+    # list_allowed = [(pos_2d_x + offset[0])*8+pos_2d_y + offset[1] for offset in offsets if (0 <= pos_2d_x + offset[0] <= 7 and 0 <= pos_2d_y + offset[1]<=7)]
+    # list_2d = [[pos_2d_x+offset[0], pos_2d_y+offset[1]] for offset in offsets]
+    # aux = filter(lambda x: 0 <= x[0] <= 7 and 0 <= x[1]<=7, list_2d)
+    # list_allowed = map(lambda x: x[0]*8+x[1], aux)
 
+    for offset in offsets:
+        allowed_x = pos_2d_x + offset[0]
+        allowed_y = pos_2d_y + offset[1]
+        if 0 <= allowed_x <= 7 and 0 <= allowed_y <= 7:
+            list_allowed.append(allowed_x * 8 + allowed_y)
     return list_allowed
 
 
