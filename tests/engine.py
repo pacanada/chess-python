@@ -8,20 +8,20 @@ DICT_TEST = {
         "fen": "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 0",
         "bm": "d6d1",
     },
-    # 1: {
-    #     "fen": "3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - 0 0",
-    #     "bm": "d4d5",
-    # },
-    # 2: {
-    #     "fen": "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - 0 0",
-    #     "bm": "f6f5",
-    # },  # this one chess.com does not agree
-    # 3: {
-    #     "fen": "rnbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R w KQkq - 0 0",
-    #     "bm": "e5e6",
-    # },
-    # 4: {"fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "bm":"e2e4" # not really
-    # }
+    1: {
+        "fen": "3r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - 0 0",
+        "bm": "d4d5",
+    },
+    2: {
+        "fen": "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - 0 0",
+        "bm": "f6f5",
+    },  # this one chess.com does not agree
+    3: {
+        "fen": "rnbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R w KQkq - 0 0",
+        "bm": "e5e6",
+    },
+    4: {"fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "bm":"e2e4" # not really
+    }
 }
 
 # "r1b2rk1/2q1b1pp/p2ppn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1 w - -" bm Nd5 a4; id "BK.05";
@@ -53,7 +53,7 @@ def test_engine():
         chess = Chess(fen)
         # something is wrong with transpositions
         agent = Agent(
-            depth=5,
+            depth=3,
             color=chess.state.turn,
             alpha_beta=True,
             move_ordering=True,
