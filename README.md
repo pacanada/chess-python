@@ -4,7 +4,6 @@ Python implementation of chess game in less than 1000 lines of code.
 
 There is also a work in progress for the cli based game (`python -m chess_python.game`).
 
-Disclaimer: it is missing api for checkmate and stalemates
 
 # Usage
 
