@@ -21,7 +21,6 @@ DICT_TEST = {
     #     "bm": "e5e6",
     # },
     # 4: {"fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "bm":"e2e4" # not really
-
     # }
 }
 
@@ -52,11 +51,20 @@ def test_engine():
         fen = v["fen"]
         bm = v["bm"]
         chess = Chess(fen)
-        agent = Agent(depth=5,color=chess.state.turn, alpha_beta=True, move_ordering=True, use_transpositions=True)
+        # something is wrong with transpositions
+        agent = Agent(
+            depth=5,
+            color=chess.state.turn,
+            alpha_beta=True,
+            move_ordering=True,
+            use_transpositions=False,
+        )
         t0 = time.time()
         recommended_moves = agent.recommend(chess, True)
         t1 = time.time()
-        print(f"{k=}, {agent.alpha_beta=} {agent.move_ordering=}, Time: {(t1-t0):.2f}. Nodes visited: {agent.nodes_visited}. Transpositions found {agent.transpositions_found}")
+        print(
+            f"{agent.depth=}, {k=}, {agent.alpha_beta=} {agent.move_ordering=}, Time: {(t1-t0):.2f}. Nodes visited: {agent.nodes_visited}. Transpositions found {agent.transpositions_found}"
+        )
         print(recommended_moves[:])
         print(bm)
 
