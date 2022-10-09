@@ -5,3 +5,5 @@ __pycache__
 .mypy_cache
 *.json
 prof*.txt
+# for pip install in editable mode from other repos
+setup.py

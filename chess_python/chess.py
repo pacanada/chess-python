@@ -386,10 +386,10 @@ class Chess:
             + repr_str
         )
 
-    def legal_moves(self):
-        allowed_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
+    def update_outcome(self):
+        legal_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
         # handle end of game
-        if len(allowed_moves) == 0:
+        if len(legal_moves) == 0:
             king_pos = self.state.board.index(self.state.turn * 6)
             if king_pos in self.optimizer.attacked_map:
                 self.is_checkmate = True
@@ -397,6 +397,24 @@ class Chess:
             else:
                 self.is_stalemate = True
                 self.result = 0
+        if self.move_combination[]
+        
+
+    def legal_moves(self):
+        allowed_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
+        return allowed_moves
+
+
+
+    def legal_moves_in_position(self, pos:int)->List[int]:
+        allowed_moves = _get_allowed_moves(
+                board=self.state.board,
+                pos=pos,
+                en_passant_allowed=self.state.en_passant_allowed,
+                castling_rights=self.state.castling_rights,
+                state=self.state,
+                optimizer=self.optimizer,
+            )
         return allowed_moves
 
     def fen(self):
@@ -447,12 +465,14 @@ class Chess:
 
     def move(
         self,
-        move: str,
+        move: Union[str, List[int]],
         check_allowed_moves: bool = False,
         update_optimizer: bool = True,
     ):
-
-        pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
+        if isinstance(move, list):
+            pos_i, pos_f, promoted_piece = move[0], move[1], move[2]
+        else:
+            pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
         piece = self.state.board[pos_i]
         piece_color = 1 if piece > 0 else -1
         if check_allowed_moves:
