@@ -397,24 +397,21 @@ class Chess:
             else:
                 self.is_stalemate = True
                 self.result = 0
-        if self.move_combination[]
-        
+        # TODO: Missing draw by repetition and insufficient material
 
     def legal_moves(self):
         allowed_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
         return allowed_moves
 
-
-
-    def legal_moves_in_position(self, pos:int)->List[int]:
+    def legal_moves_in_position(self, pos: int) -> List[int]:
         allowed_moves = _get_allowed_moves(
-                board=self.state.board,
-                pos=pos,
-                en_passant_allowed=self.state.en_passant_allowed,
-                castling_rights=self.state.castling_rights,
-                state=self.state,
-                optimizer=self.optimizer,
-            )
+            board=self.state.board,
+            pos=pos,
+            en_passant_allowed=self.state.en_passant_allowed,
+            castling_rights=self.state.castling_rights,
+            state=self.state,
+            optimizer=self.optimizer,
+        )
         return allowed_moves
 
     def fen(self):
@@ -472,7 +469,7 @@ class Chess:
         if isinstance(move, list):
             pos_i, pos_f, promoted_piece = move[0], move[1], move[2]
         else:
-            pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)
+            pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)  # type: ignore[assignment]
         piece = self.state.board[pos_i]
         piece_color = 1 if piece > 0 else -1
         if check_allowed_moves:
@@ -490,7 +487,7 @@ class Chess:
         # Realize move
         if promoted_piece is not None:
             self.state.board[pos_f] = (
-                ChessUtils.PIECE_DICT[promoted_piece] * -piece_color
+                ChessUtils.PIECE_DICT[promoted_piece] * -piece_color  # type: ignore[index]
             )  # lower case is negative already
         else:
             self.state.board[pos_f] = self.state.board[pos_i]
@@ -521,7 +518,7 @@ class Chess:
             # avoid time consuming for last node (for engines purposes)
             self.optimizer._update(self.state)
         # Bonus, keeping track of move combinations for debugging
-        self.move_combination.append(move)
+        self.move_combination.append(move)  # type: ignore[arg-type]
 
         return self
 
