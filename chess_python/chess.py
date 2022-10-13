@@ -377,7 +377,7 @@ class Chess:
         self.is_stalemate = False
         self.is_threefold_repetition = False
         self.is_draw_by_insufficient_material = False
-        self.state_mem = []
+        self.state_mem: List[int] = []
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
