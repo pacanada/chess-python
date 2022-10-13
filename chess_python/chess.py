@@ -420,15 +420,25 @@ class Chess:
 
         # if threefold can be claimed, it is claimed by default
         for state_hash in self.state_mem:
-            if self.state_mem.count(state_hash) >=3:
+            if self.state_mem.count(state_hash) >= 3:
                 self.is_threefold_repetition = True
                 self.result = 0
                 break
 
         # TODO: insufficient material ()
-        friendly_pieces_value = sum([ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])] for pos in self.optimizer.friendly_positions])
-        enemy_pieces_value = sum([ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])] for pos in self.optimizer.enemy_positions])
-        if friendly_pieces_value <= 13 and enemy_pieces_value <=13:
+        friendly_pieces_value = sum(
+            [
+                ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])]
+                for pos in self.optimizer.friendly_positions
+            ]
+        )
+        enemy_pieces_value = sum(
+            [
+                ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])]
+                for pos in self.optimizer.enemy_positions
+            ]
+        )
+        if friendly_pieces_value <= 13 and enemy_pieces_value <= 13:
             self.is_draw_by_insufficient_material = True
             self.result = 0
 
