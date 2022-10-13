@@ -377,7 +377,7 @@ class Chess:
         self.is_stalemate = False
         self.is_threefold_repetition = False
         self.is_draw_by_insufficient_material = False
-        self.state_mem = [self.state._hash_state()]
+        self.state_mem = []
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
@@ -385,13 +385,13 @@ class Chess:
         chess = type(self)(fen=None, run_optimizer=False, initialize=False)
         chess.state = deepcopy(self.state)
         chess.optimizer = self.optimizer
-        chess.move_combination = self.move_combination
+        chess.move_combination = deepcopy(self.move_combination)
         chess.result = self.result
         chess.is_checkmate = self.is_checkmate
         chess.is_stalemate = self.is_stalemate
         chess.is_threefold_repetition = self.is_threefold_repetition
         chess.is_draw_by_insufficient_material = self.is_draw_by_insufficient_material
-        chess.state_mem = self.state_mem
+        chess.state_mem = deepcopy(self.state_mem)
         return chess
 
     def __repr__(self):
