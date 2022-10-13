@@ -99,6 +99,16 @@ class ChessUtils:
             "positions_should_not_attacked": [60, 61, 62],
         },
     }
+    # for insufficient material
+    PIECE_VALUES_ABS = {
+        0: 0,
+        1: 9,
+        2: 3,
+        3: 3,
+        4: 5,
+        5: 9,
+        6: 10,
+    }
 
 
 class State:
@@ -161,6 +171,10 @@ class State:
                 self.en_passant_allowed,
             )
         )
+
+    def _hash_state(self):
+        """For keeping track of threefold repetition"""
+        return hash(tuple(self.board) + tuple(self.castling_rights))
 
 
 class Optimizer:
@@ -361,6 +375,9 @@ class Chess:
         self.result = None
         self.is_checkmate = False
         self.is_stalemate = False
+        self.is_threefold_repetition = False
+        self.is_draw_by_insufficient_material = False
+        self.state_mem = [self.state._hash_state()]
 
     def __deepcopy__(self, memo: Dict[int, object]):  # noqa U100
         """Creates a deepcopy of the board."""
@@ -372,6 +389,9 @@ class Chess:
         chess.result = self.result
         chess.is_checkmate = self.is_checkmate
         chess.is_stalemate = self.is_stalemate
+        chess.is_threefold_repetition = self.is_threefold_repetition
+        chess.is_draw_by_insufficient_material = self.is_draw_by_insufficient_material
+        chess.state_mem = self.state_mem
         return chess
 
     def __repr__(self):
@@ -397,7 +417,20 @@ class Chess:
             else:
                 self.is_stalemate = True
                 self.result = 0
-        # TODO: Missing draw by repetition and insufficient material
+
+        # if threefold can be claimed, it is claimed by default
+        for state_hash in self.state_mem:
+            if self.state_mem.count(state_hash) >=3:
+                self.is_threefold_repetition = True
+                self.result = 0
+                break
+
+        # TODO: insufficient material ()
+        friendly_pieces_value = sum([ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])] for pos in self.optimizer.friendly_positions])
+        enemy_pieces_value = sum([ChessUtils.PIECE_VALUES_ABS[abs(self.state.board[pos])] for pos in self.optimizer.enemy_positions])
+        if friendly_pieces_value <= 13 and enemy_pieces_value <=13:
+            self.is_draw_by_insufficient_material = True
+            self.result = 0
 
     def legal_moves(self):
         allowed_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
@@ -517,8 +550,9 @@ class Chess:
         if update_optimizer and self.optimizer is not None:
             # avoid time consuming for last node (for engines purposes)
             self.optimizer._update(self.state)
-        # Bonus, keeping track of move combinations for debugging
+        # Bonus, keeping track of move combinations for debugging and threefold repetition
         self.move_combination.append(move)  # type: ignore[arg-type]
+        self.state_mem.append(self.state._hash_state())
 
         return self
 
