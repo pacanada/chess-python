@@ -287,7 +287,7 @@ class Optimizer:
             else:
                 # also where the piece block check
                 blocking_check_positions = self._get_blocking_check_positions(state, king_pos)
-                return is_only_one_piece_attacking and pos_f in blocking_check_positions
+                return is_only_one_piece_attacking and pos_f in blocking_check_positions and pos_i not in self.pin_map
         else:
             if pos_i in self.pin_map:
                 is_along_pinned_squares = pos_f in self.pin_map_dict[pos_i][1]

@@ -52,6 +52,20 @@ def perft_of_positions():
             "depth": 4,
             "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         },
+        6: {
+        "name": "puzzle",
+        "n_nodes": 53640,
+        "approx_time": 0.26,
+        "depth": 3,
+        "fen": "3qr2k/pbpp2pp/1p5N/3Q2b1/2P1P3/P7/1PP2PPP/R4RK1 w - - 0 1",
+    },
+        7: {"name": "bug",
+        "n_nodes": 3,
+            "depth": 1,
+            "approx_time": 0.001,
+
+            "fen": "2N3k1/1P6/1B2P1Bp/7p/8/2b1r3/4R3/4K3 w - - 0 1"
+            }
     }
 
 
