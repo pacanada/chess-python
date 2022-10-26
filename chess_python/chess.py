@@ -388,7 +388,7 @@ class Chess:
         # we do this to create the objects in memory but with the minimum overhead
         chess = type(self)(fen=None, run_optimizer=False, initialize=False)
         chess.state = deepcopy(self.state)
-        chess.optimizer = self.optimizer
+        chess.optimizer = deepcopy(self.optimizer)
         chess.move_combination = deepcopy(self.move_combination)
         chess.result = self.result
         chess.is_checkmate = self.is_checkmate
