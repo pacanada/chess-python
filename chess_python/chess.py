@@ -581,7 +581,8 @@ class Chess:
         self.state_mem.append(self.state._hash_state())
         if sum(self.state.board) == value_pieces and not is_pawn_move:
             self.no_piece_captured_moves += 1
-
+        else:
+            self.no_piece_captured_moves = 0
         return self
 
     def _update_en_passant_rights(self, piece, pos_i, pos_f):
