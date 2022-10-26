@@ -376,10 +376,12 @@ class Chess:
         self.state = State(fen=fen) if initialize else State(fen="", initialize=False)
         self.optimizer = Optimizer(self.state) if run_optimizer and initialize else None
         self.move_combination: List[str] = []
+        self.no_piece_captured_moves = 0
         self.result = None
         self.is_checkmate = False
         self.is_stalemate = False
         self.is_threefold_repetition = False
+        self.is_fifty_moves = False
         self.is_draw_by_insufficient_material = False
         self.state_mem: List[int] = []
 
@@ -390,10 +392,12 @@ class Chess:
         chess.state = deepcopy(self.state)
         chess.optimizer = deepcopy(self.optimizer)
         chess.move_combination = deepcopy(self.move_combination)
+        self.no_piece_captured_moves = self.no_piece_captured_moves
         chess.result = self.result
         chess.is_checkmate = self.is_checkmate
         chess.is_stalemate = self.is_stalemate
         chess.is_threefold_repetition = self.is_threefold_repetition
+        chess.is_fifty_moves = self.is_fifty_moves
         chess.is_draw_by_insufficient_material = self.is_draw_by_insufficient_material
         chess.state_mem = deepcopy(self.state_mem)
         return chess
@@ -411,6 +415,9 @@ class Chess:
         )
 
     def update_outcome(self):
+        if self.no_piece_captured_moves > 50:
+            self.is_fifty_moves = True
+            self.result = 0
         legal_moves = _get_allowed_moves_in_state(state=self.state, optimizer=self.optimizer)
         # handle end of game
         if len(legal_moves) == 0:
@@ -513,11 +520,16 @@ class Chess:
         check_allowed_moves: bool = False,
         update_optimizer: bool = True,
     ):
+
         if isinstance(move, list):
             pos_i, pos_f, promoted_piece = move[0], move[1], move[2]
         else:
             pos_i, pos_f, promoted_piece = self._convert_move_to_ints(move)  # type: ignore[assignment]
+
         piece = self.state.board[pos_i]
+        # for 50 moves rule
+        value_pieces = sum(self.state.board)
+        is_pawn_move = abs(piece) == 1
         piece_color = 1 if piece > 0 else -1
         if check_allowed_moves:
             allowed_moves = _get_allowed_moves(
@@ -567,6 +579,8 @@ class Chess:
         # Bonus, keeping track of move combinations for debugging and threefold repetition
         self.move_combination.append(move)  # type: ignore[arg-type]
         self.state_mem.append(self.state._hash_state())
+        if sum(self.state.board) == value_pieces and not is_pawn_move:
+            self.no_piece_captured_moves += 1
 
         return self
 
